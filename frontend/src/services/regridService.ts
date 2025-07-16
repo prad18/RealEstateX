@@ -446,6 +446,6 @@ export class RegridPropertyService {
 
 // Singleton instance
 export const regridService = new RegridPropertyService({
-  apiKey: import.meta.env.VITE_REGRID_API_KEY || 'eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJyZWdyaWQuY29tIiwiaWF0IjoxNzUyNjU5OTY1LCJleHAiOjE3NTUyNTE5NjUsInUiOjU2MDk2OCwiZyI6MjMxNTMsImNhcCI6InBhOnRzOnBzOmJmOm1hOnR5OmVvOnpvOnNiIn0.ompsOyn--wJABGHgiuElZgi-QmzKhnc1axXrBp3ohC0',
+  apiKey: import.meta.env.VITE_REGRID_API_KEY,
   baseUrl: 'https://app.regrid.com/api/v2'
 });
