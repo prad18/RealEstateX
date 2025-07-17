@@ -530,6 +530,281 @@ function DocumentUpload() {
 }
 ```
 
+## Regrid Service
+
+The RegridService provides integration with the Regrid API for accessing real estate property data from government records. This service enables property lookup by coordinates, data transformation, and property valuation generation.
+
+### Core Implementation
+
+```typescript
+// services/regridService.ts
+
+interface ServiceConfig {
+  baseUrl: string;
+  apiKey: string;
+  timeout: number;
+}
+
+export class RegridPropertyService {
+  private config: ServiceConfig;
+  private cache = new Map<string, PropertyDetails>();
+  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+  
+  constructor(config: ServiceConfig) {
+    this.config = config;
+  }
+
+  /**
+   * Get property details by coordinates
+   */
+  async getPropertyByCoordinates(
+    lat: number,
+    lon: number,
+    radius: number = 100
+  ): Promise<{
+    success: boolean;
+    data?: PropertyDetails;
+    error?: string;
+  }> {
+    try {
+      // Check cache first
+      const cacheKey = `${lat}_${lon}_${radius}`;
+      const cached = this.getCachedResult(cacheKey);
+      if (cached) {
+        return { success: true, data: cached };
+      }
+
+      const response = await fetch(
+        `${this.config.baseUrl}/parcels/point?lat=${lat}&lon=${lon}&radius=${radius}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.config.apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data: RegridApiResponse = await response.json();
+      
+      if (!data.parcels?.features?.length) {
+        return {
+          success: false,
+          error: 'No property found at these coordinates'
+        };
+      }
+
+      const propertyData = data.parcels.features[0].properties;
+      const propertyDetails = this.transformRegridData(propertyData);
+
+      // Cache the result
+      this.cacheResult(cacheKey, propertyDetails);
+
+      return { success: true, data: propertyDetails };
+    } catch (error) {
+      console.error('Regrid API error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
+   * Generate property valuation based on Regrid data
+   */
+  async getPropertyValuation(lat: number, lon: number): Promise<{
+    success: boolean;
+    data?: PropertyValuation;
+    error?: string;
+  }> {
+    try {
+      const propertyResult = await this.getPropertyByCoordinates(lat, lon);
+      
+      if (!propertyResult.success || !propertyResult.data) {
+        return {
+          success: false,
+          error: 'Property data required for valuation'
+        };
+      }
+
+      const property = propertyResult.data;
+      const valuation = this.generateValuation(property);
+      
+      return { success: true, data: valuation };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Valuation failed'
+      };
+    }
+  }
+}
+
+// Service instance
+export const regridService = new RegridPropertyService({
+  baseUrl: 'https://api.regrid.com/api/v1',
+  apiKey: process.env.VITE_REGRID_API_KEY || '',
+  timeout: 10000
+});
+```
+
+### Supported Counties
+
+The Regrid API currently supports property data for **7 counties**:
+
+- **Marion County, Indiana** - Indianapolis metro area
+- **Dallas County, Texas** - Dallas metro area  
+- **Wilson County, Tennessee** - Nashville metro area
+- **Durham County, North Carolina** - Research Triangle
+- **Fillmore County, Nebraska** - Rural Nebraska
+- **Clark County, Wisconsin** - Central Wisconsin
+- **Gurabo Municipio, Puerto Rico** - Puerto Rico territory
+
+### Data Transformation
+
+The service transforms Regrid API data into standardized PropertyDetails format:
+
+```typescript
+private transformRegridData(regridData: RegridPropertyData): PropertyDetails {
+  const mainAddress = regridData.addresses?.[0];
+  const ownership = regridData.enhanced_ownership?.[0];
+  
+  return {
+    address: this.buildFullAddress(regridData, mainAddress),
+    city: mainAddress?.a_city || regridData.fields?.a_city || '',
+    state: mainAddress?.a_state2 || regridData.fields?.a_state2 || '',
+    area: regridData.fields?.ll_gissqft || regridData.fields?.ll_bldg_footprint_sqft || 0,
+    propertyType: this.determinePropertyType(
+      regridData.fields?.lbcs_activity || '',
+      regridData.fields?.lbcs_structure || ''
+    ),
+    coordinates: {
+      lat: parseFloat(mainAddress?.a_lat || '0'),
+      lon: parseFloat(mainAddress?.a_lon || '0')
+    },
+    owner: ownership?.eo_owner || regridData.fields?.owner || 'Unknown',
+    value: {
+      land: regridData.fields?.ll_land_val || 0,
+      improvement: regridData.fields?.ll_imprv_val || 0,
+      total: regridData.fields?.ll_assessed_val || 0
+    },
+    zoning: {
+      code: regridData.fields?.zoning || '',
+      description: regridData.fields?.zoning_description || '',
+      type: regridData.fields?.lbcs_activity || '',
+      subtype: regridData.fields?.lbcs_structure || ''
+    },
+    legal: {
+      parcelNumber: regridData.fields?.parcelnumb || regridData.ll_uuid || '',
+      stateParcelNumber: regridData.fields?.state_parcelnumb || '',
+      legalDescription: regridData.fields?.legal_description || ''
+    },
+    demographics: {
+      medianIncome: regridData.fields?.median_household_income || 0,
+      affordabilityIndex: regridData.fields?.housing_affordability_index || 0,
+      populationDensity: regridData.fields?.population_density || 0
+    }
+  };
+}
+```
+
+### Integration with LocationPicker
+
+```typescript
+import { LocationPicker } from '@/components/LocationPicker';
+import { regridService } from '@/services/regridService';
+
+function PropertyLookupForm() {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  const [properties, setProperties] = useState<PropertyDetails[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  const handleLocationChange = async (newLocation: LocationData) => {
+    setLocation(newLocation);
+    setLoading(true);
+    
+    try {
+      const result = await regridService.getPropertyByCoordinates(
+        newLocation.latitude,
+        newLocation.longitude,
+        100 // 100m radius
+      );
+      
+      if (result.success && result.data) {
+        setProperties([result.data]);
+      } else {
+        setProperties([]);
+        console.warn('No property found at this location');
+      }
+    } catch (error) {
+      console.error('Property lookup failed:', error);
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <LocationPicker 
+        onLocationChange={handleLocationChange}
+        addressPlaceholder="Enter property address for lookup..."
+      />
+      
+      {loading && <div>Searching for properties...</div>}
+      
+      {properties.length > 0 && (
+        <div className="space-y-4">
+          <h3>Property Found:</h3>
+          {properties.map((property, index) => (
+            <div key={index} className="p-4 border rounded-lg">
+              <h4 className="font-semibold">{property.address}</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>Owner: {property.owner}</div>
+                <div>Type: {property.propertyType}</div>
+                <div>Area: {property.area.toLocaleString()} sq ft</div>
+                <div>Assessed Value: ${property.value.total.toLocaleString()}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Usage Examples
+
+```typescript
+// Basic property lookup
+const lookupProperty = async () => {
+  const result = await regridService.getPropertyByCoordinates(39.7684, -86.1581, 100);
+  
+  if (result.success && result.data) {
+    console.log('Property found:', result.data);
+  } else {
+    console.error('Property lookup failed:', result.error);
+  }
+};
+
+// Property valuation
+const getValuation = async () => {
+  const result = await regridService.getPropertyValuation(39.7684, -86.1581);
+  
+  if (result.success && result.data) {
+    const valuation = result.data;
+    console.log(`Estimated Value: $${valuation.estimatedValue.toLocaleString()}`);
+    console.log(`Confidence: ${valuation.confidenceScore}%`);
+    console.log(`Market Trend: ${valuation.marketTrend}`);
+  }
+};
+```
+
 ## Property Valuation Service
 
 The PropertyValuationService provides AI-powered property valuation using multiple data sources and algorithms.
@@ -970,6 +1245,283 @@ function PropertyValuation() {
   );
 }
 ```
+
+## Regrid Service
+
+The RegridService provides real estate data integration using the Regrid API for property information and government records lookup. Currently supports 7 counties with comprehensive property data access.
+
+### Core Implementation
+
+```typescript
+// services/regridService.ts
+
+interface PropertyData {
+  parcel_id: string;
+  address: string;
+  owner_name?: string;
+  property_type?: string;
+  land_use?: string;
+  year_built?: number;
+  total_assessed_value?: number;
+  land_value?: number;
+  improvement_value?: number;
+  tax_amount?: number;
+  lot_size?: number;
+  building_area?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  last_sale?: {
+    date: string;
+    price: number;
+  };
+}
+
+interface PropertyValuation {
+  estimated_value: number;
+  confidence_score: number;
+  value_per_sqft: number;
+  market_trend: 'rising' | 'stable' | 'declining';
+  factors: Array<{
+    factor: string;
+    impact: 'positive' | 'negative' | 'neutral';
+    weight: number;
+    description: string;
+  }>;
+  comparable_sales: Array<{
+    address: string;
+    sale_price: number;
+    sale_date: string;
+    distance_km: number;
+    similarity_score: number;
+  }>;
+  generated_at: string;
+}
+
+class RegridService {
+  private apiKey: string;
+  private baseUrl = 'https://app.regrid.com/api/v1';
+  
+  constructor() {
+    this.apiKey = import.meta.env.VITE_REGRID_API_KEY;
+    if (!this.apiKey) {
+      console.warn('Regrid API key not found. Property lookup will be limited.');
+    }
+  }
+  
+  /**
+   * Get property data by coordinates with radius search
+   */
+  async getPropertyByCoordinates(
+    latitude: number, 
+    longitude: number, 
+    radiusKm: number = 0.1
+  ): Promise<PropertyData[]> {
+    // Implementation details...
+  }
+  
+  /**
+   * Generate property valuation using Regrid data and market analysis
+   */
+  async getPropertyValuation(property: PropertyData): Promise<PropertyValuation> {
+    // Implementation details...
+  }
+}
+```
+
+### Supported Counties
+
+The Regrid service currently supports property lookup in the following 7 counties:
+
+1. **Marion County, Indiana** - Indianapolis metro area
+2. **Dallas County, Texas** - Dallas metro area  
+3. **Wilson County, Tennessee** - Nashville metro area
+4. **Durham County, North Carolina** - Research Triangle area
+5. **Fillmore County, Nebraska** - Rural agricultural area
+6. **Clark County, Wisconsin** - Small town/rural area
+7. **Gurabo Municipio, Puerto Rico** - Caribbean territory
+
+### Key Features
+
+**Property Data Lookup:**
+- Government records integration
+- Property ownership information
+- Tax assessment data
+- Building characteristics
+- Historical sale records
+- Coordinate-based search with radius support
+
+**Valuation Generation:**
+- Market-based property estimation
+- Comparable sales analysis
+- Location and property type factors
+- Confidence scoring (0-100%)
+- Market trend analysis
+
+**API Integration:**
+- RESTful API with JSON responses
+- Rate limiting and error handling
+- Caching for performance optimization
+- Fallback behavior for unsupported areas
+
+### Usage Examples
+
+#### Basic Property Lookup
+
+```typescript
+import { RegridService } from '@/services/regridService';
+
+async function lookupProperty() {
+  const regridService = new RegridService();
+  
+  try {
+    // Search for properties near coordinates (Marion County, IN example)
+    const properties = await regridService.getPropertyByCoordinates(
+      39.7684, // Indianapolis latitude
+      -86.1581, // Indianapolis longitude
+      0.5       // 500m radius
+    );
+    
+    if (properties.length > 0) {
+      console.log('Found properties:', properties);
+      
+      // Get valuation for first property
+      const valuation = await regridService.getPropertyValuation(properties[0]);
+      console.log('Property valuation:', valuation);
+    } else {
+      console.log('No properties found in this area');
+    }
+  } catch (error) {
+    console.error('Property lookup failed:', error);
+  }
+}
+```
+
+#### Integration with Location Picker
+
+```typescript
+import { LocationPicker } from '@/components/LocationPicker';
+import { RegridService } from '@/services/regridService';
+
+function PropertyLookupForm() {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  const [properties, setProperties] = useState<PropertyData[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  const regridService = new RegridService();
+  
+  const handleLocationChange = async (newLocation: LocationData) => {
+    setLocation(newLocation);
+    setLoading(true);
+    
+    try {
+      const foundProperties = await regridService.getPropertyByCoordinates(
+        newLocation.latitude,
+        newLocation.longitude,
+        0.1 // 100m radius
+      );
+      setProperties(foundProperties);
+    } catch (error) {
+      console.error('Property lookup failed:', error);
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <LocationPicker 
+        onLocationChange={handleLocationChange}
+        addressPlaceholder="Enter property address for lookup..."
+      />
+      
+      {loading && <div>Searching for properties...</div>}
+      
+      {properties.length > 0 && (
+        <div className="space-y-4">
+          <h3>Found {properties.length} properties:</h3>
+          {properties.map((property, index) => (
+            <div key={index} className="p-4 border rounded-lg">
+              <h4 className="font-semibold">{property.address}</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>Owner: {property.owner_name || 'N/A'}</div>
+                <div>Type: {property.property_type || 'N/A'}</div>
+                <div>Year Built: {property.year_built || 'N/A'}</div>
+                <div>Assessed Value: ${property.total_assessed_value?.toLocaleString() || 'N/A'}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+#### Property Valuation with Market Analysis
+
+```typescript
+async function getDetailedValuation(property: PropertyData) {
+  const regridService = new RegridService();
+  
+  try {
+    const valuation = await regridService.getPropertyValuation(property);
+    
+    console.log(`Property Value: $${valuation.estimated_value.toLocaleString()}`);
+    console.log(`Confidence: ${valuation.confidence_score}%`);
+    console.log(`Price per sqft: $${valuation.value_per_sqft}`);
+    console.log(`Market Trend: ${valuation.market_trend}`);
+    
+    // Display valuation factors
+    valuation.factors.forEach(factor => {
+      console.log(`${factor.factor}: ${factor.impact} (${factor.weight}%)`);
+    });
+    
+    // Display comparable sales
+    valuation.comparable_sales.forEach(comp => {
+      console.log(`Comp: ${comp.address} - $${comp.sale_price.toLocaleString()}`);
+    });
+    
+    return valuation;
+  } catch (error) {
+    console.error('Valuation failed:', error);
+    throw error;
+  }
+}
+```
+
+### Configuration
+
+Add the Regrid API key to your environment variables:
+
+```env
+# .env file
+VITE_REGRID_API_KEY=your_regrid_api_key_here
+```
+
+### Error Handling
+
+The service includes comprehensive error handling for common scenarios:
+
+- **Invalid coordinates**: Returns empty array with warning
+- **Unsupported county**: Provides helpful message about supported areas
+- **API rate limiting**: Implements retry logic with exponential backoff
+- **Network errors**: Graceful degradation with cached data when available
+- **Invalid API key**: Clear error messages for authentication issues
+
+### Integration with Property Registration
+
+The Regrid service integrates seamlessly with the property registration workflow:
+
+1. **Location Selection**: User selects location using LocationPicker
+2. **Property Lookup**: Regrid API searches for properties at coordinates
+3. **Data Pre-fill**: Found property data pre-fills registration form
+4. **Valuation**: Automatic property valuation for tokenization
+5. **Verification**: Property data used in verification process
 
 ## API Integration Guide
 

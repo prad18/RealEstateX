@@ -31,8 +31,42 @@
    cp env.example .env
    # Edit .env with your configuration
    ```
+   
+   **Required Environment Variables:**
+   ```env
+   # IPFS Configuration
+   VITE_PINATA_JWT=your_pinata_jwt_token
+   VITE_PINATA_GATEWAY=https://gateway.pinata.cloud
 
-3. **Start Development Server**
+   # Blockchain Configuration  
+   VITE_BLOCKDAG_RPC_URL=https://rpc.blockdag.network
+   VITE_BLOCKDAG_CHAIN_ID=1043
+
+   # WalletConnect Configuration
+   VITE_WALLET_CONNECT_PROJECT_ID=your_wallet_connect_project_id
+
+   # Real Estate Data API
+   VITE_REGRID_API_KEY=your_regrid_api_key
+   ```
+
+3. **API Setup (Required for Full Functionality)**
+   
+   **Regrid API Setup:**
+   - Visit [Regrid.com](https://regrid.com/) → Datastore → API Access
+   - Create account and generate API token
+   - Add to `.env` as `VITE_REGRID_API_KEY`
+   
+   **Pinata IPFS Setup:**
+   - Visit [Pinata.cloud](https://pinata.cloud/) and create account
+   - Generate JWT token with admin permissions
+   - Add to `.env` as `VITE_PINATA_JWT`
+   
+   **WalletConnect Setup:**
+   - Visit [WalletConnect Cloud](https://cloud.walletconnect.com/)
+   - Create new project and get Project ID
+   - Add to `.env` as `VITE_WALLET_CONNECT_PROJECT_ID`
+
+4. **Start Development Server**
    ```bash
    npm run dev
    ```
@@ -44,21 +78,45 @@ src/
 ├── components/              # React components (UI layer)
 │   ├── dashboard/          # Main dashboard and navigation
 │   ├── property/           # Property management components
+│   │   ├── PropertyRegistration.tsx    # Coordinate-based registration
+│   │   └── CoordinatePropertyLookup.tsx # Real property data lookup
 │   ├── upload/             # File upload components
 │   ├── verification/       # Verification status and progress
-│   └── wallet/             # Web3 wallet integration
+│   ├── wallet/             # Web3 wallet integration
+│   └── LocationPicker.tsx  # Interactive location selection
 ├── services/               # Business logic layer
 │   ├── web3Service.ts      # Blockchain interactions
 │   ├── ipfs.ts             # IPFS file storage
 │   ├── verificationService.ts # Property verification
-│   └── propertyValuation.ts   # Property pricing
+│   ├── propertyValuation.ts   # Property pricing
+│   ├── regridService.ts    # Real estate data API (NEW)
+│   └── api.ts              # API utilities
 ├── config/                 # Configuration files
 │   └── wallet.ts           # Web3 wallet configuration
 ├── hooks/                  # Custom React hooks
+│   └── useWallet.ts        # Wallet connection hook
 ├── utils/                  # Utility functions
 ├── types/                  # TypeScript type definitions
 └── assets/                 # Static assets
 ```
+
+### New Components and Services
+
+#### 🗺️ **LocationPicker Component**
+- **File**: `src/components/LocationPicker.tsx`
+- **Purpose**: Interactive location selection with three synchronized input methods
+- **APIs**: Nominatim geocoding, OpenStreetMap tiles, Leaflet maps
+- **Features**: Address input, coordinate input, interactive map
+
+#### 🏢 **RegridService**
+- **File**: `src/services/regridService.ts`
+- **Purpose**: Real estate data access via Regrid API
+- **Coverage**: 7 supported counties with government records
+- **Features**: Property lookup, valuation generation, data caching
+
+#### 🏠 **Enhanced Property Components**
+- **CoordinatePropertyLookup**: Real property data lookup with interactive maps
+- **PropertyRegistration**: Now supports coordinate-based registration with real data
 
 ## Development Environment
 

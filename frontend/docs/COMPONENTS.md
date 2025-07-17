@@ -95,6 +95,135 @@ function App() {
 }
 ```
 
+### LocationPicker
+
+Interactive geolocation component with three synchronized input methods for property location selection.
+
+```typescript
+interface LocationPickerProps {
+  /** Callback when location changes */
+  onLocationChange: (location: LocationData) => void;
+  /** Initial location data */
+  initialLocation?: Partial<LocationData>;
+  /** Placeholder text for address input */
+  addressPlaceholder?: string;
+  /** Custom CSS classes for styling */
+  className?: string;
+  /** Disable specific input methods */
+  disabled?: {
+    address?: boolean;
+    coordinates?: boolean;
+    map?: boolean;
+  };
+}
+
+interface LocationData {
+  address: string;
+  latitude: number;
+  longitude: number;
+  city?: string;
+  state?: string;
+  country?: string;
+  postcode?: string;
+}
+
+export const LocationPicker: React.FC<LocationPickerProps> = ({
+  onLocationChange,
+  initialLocation,
+  addressPlaceholder = "Enter property address...",
+  className,
+  disabled = {}
+}) => {
+  // Implementation details...
+};
+```
+
+**Key Features:**
+- **Forward Geocoding**: Address → Coordinates using Nominatim API
+- **Reverse Geocoding**: Coordinates → Address with detailed location info
+- **Interactive Map**: Leaflet map with OpenStreetMap tiles and draggable markers
+- **Real-time Sync**: All three input methods update each other automatically
+- **Debounced Input**: Prevents excessive API calls during user typing
+- **Rate Limiting**: Respects Nominatim API rate limits (1 request/second)
+- **Error Handling**: Graceful handling of geocoding failures and network errors
+
+**Usage Example:**
+```tsx
+import { LocationPicker } from '@/components/LocationPicker';
+
+function PropertyLocationForm() {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  
+  const handleLocationChange = (newLocation: LocationData) => {
+    setLocation(newLocation);
+    console.log('Location updated:', newLocation);
+  };
+  
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Property Location</h3>
+      <LocationPicker
+        onLocationChange={handleLocationChange}
+        initialLocation={{
+          address: "123 Main St, New York, NY",
+          latitude: 40.7128,
+          longitude: -74.0060
+        }}
+        addressPlaceholder="Enter the property address"
+        className="w-full"
+      />
+      
+      {location && (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium">Selected Location:</h4>
+          <p><strong>Address:</strong> {location.address}</p>
+          <p><strong>Coordinates:</strong> {location.latitude}, {location.longitude}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Integration with Property Services:**
+```tsx
+import { LocationPicker } from '@/components/LocationPicker';
+import { regridService } from '@/services/regridService';
+
+function PropertyLookupForm() {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  const [propertyData, setPropertyData] = useState(null);
+  
+  const handleLocationChange = async (newLocation: LocationData) => {
+    setLocation(newLocation);
+    
+    // Use location for property lookup
+    try {
+      const result = await regridService.getPropertyByCoordinates(
+        newLocation.latitude,
+        newLocation.longitude,
+        100 // 100 meter radius
+      );
+      
+      if (result.success) {
+        setPropertyData(result.data);
+      }
+    } catch (error) {
+      console.error('Property lookup failed:', error);
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <LocationPicker onLocationChange={handleLocationChange} />
+      {propertyData && (
+        <PropertyDataDisplay data={propertyData} />
+      )}
+    </div>
+  );
+}
+```
+
 ### PropertyRegistration
 
 Three-step property registration component with valuation and consent signing.
@@ -147,6 +276,149 @@ function RegistrationPage() {
       onRegistrationComplete={handleComplete}
       onStepChange={(step) => updateProgress(step)}
     />
+  );
+}
+```
+
+### LocationPicker
+
+Interactive geolocation component with synchronized address/coordinates/map selection. Provides three input methods that remain synchronized in real-time: address input with forward geocoding, latitude/longitude inputs with reverse geocoding, and interactive map with click/drag functionality.
+
+```typescript
+interface LocationPickerProps {
+  /** Callback when location changes */
+  onLocationChange: (location: LocationData) => void;
+  /** Initial location data */
+  initialLocation?: Partial<LocationData>;
+  /** Placeholder text for address input */
+  addressPlaceholder?: string;
+  /** Custom CSS classes for styling */
+  className?: string;
+  /** Disable specific input methods */
+  disabled?: {
+    address?: boolean;
+    coordinates?: boolean;
+    map?: boolean;
+  };
+}
+
+interface LocationData {
+  address: string;
+  latitude: number;
+  longitude: number;
+  city?: string;
+  state?: string;
+  country?: string;
+  postcode?: string;
+}
+
+export const LocationPicker: React.FC<LocationPickerProps> = ({
+  onLocationChange,
+  initialLocation,
+  addressPlaceholder = "Enter property address...",
+  className,
+  disabled = {}
+}) => {
+  // Implementation details...
+};
+```
+
+**Key Features:**
+- **Forward Geocoding**: Address → Coordinates using Nominatim API
+- **Reverse Geocoding**: Coordinates → Address with detailed location info
+- **Interactive Map**: Leaflet map with OpenStreetMap tiles and draggable markers
+- **Real-time Sync**: All three input methods update each other automatically
+- **Debounced Input**: Prevents excessive API calls during user typing
+- **Rate Limiting**: Respects Nominatim API rate limits (1 request/second)
+- **Error Handling**: Graceful handling of geocoding failures and network errors
+
+**Map Integration:**
+- OpenStreetMap tiles for global coverage
+- Draggable markers for precise location selection
+- Click-to-place functionality
+- Responsive design with mobile touch support
+- Zoom controls and attribution
+
+**API Integration:**
+- **Nominatim API**: Free geocoding service by OpenStreetMap
+- **Rate Limiting**: Built-in 1-second delay between requests
+- **Caching**: Prevents duplicate requests for same locations
+- **Error Recovery**: Fallback behavior when geocoding fails
+
+**Usage Example:**
+```tsx
+import { LocationPicker } from '@/components/LocationPicker';
+
+function PropertyLocationForm() {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  
+  const handleLocationChange = (newLocation: LocationData) => {
+    setLocation(newLocation);
+    console.log('Location updated:', newLocation);
+  };
+  
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Property Location</h3>
+      <LocationPicker
+        onLocationChange={handleLocationChange}
+        initialLocation={{
+          address: "123 Main St, New York, NY",
+          latitude: 40.7128,
+          longitude: -74.0060
+        }}
+        addressPlaceholder="Enter property address..."
+        className="w-full"
+        disabled={{
+          map: false, // Enable all inputs
+          address: false,
+          coordinates: false
+        }}
+      />
+      
+      {location && (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium">Selected Location:</h4>
+          <p><strong>Address:</strong> {location.address}</p>
+          <p><strong>Coordinates:</strong> {location.latitude}, {location.longitude}</p>
+          {location.city && <p><strong>City:</strong> {location.city}</p>}
+          {location.state && <p><strong>State:</strong> {location.state}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Integration with Property Registration:**
+```tsx
+import { LocationPicker } from '@/components/LocationPicker';
+import { CoordinatePropertyLookup } from '@/components/property/CoordinatePropertyLookup';
+
+function PropertyRegistrationForm() {
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  
+  return (
+    <div className="space-y-6">
+      {/* Step 1: Location Selection */}
+      <div>
+        <h3>Select Property Location</h3>
+        <LocationPicker
+          onLocationChange={setSelectedLocation}
+          addressPlaceholder="Enter the property address"
+        />
+      </div>
+      
+      {/* Step 2: Property Data Lookup */}
+      {selectedLocation && (
+        <CoordinatePropertyLookup
+          initialCoordinates={{
+            lat: selectedLocation.latitude,
+            lng: selectedLocation.longitude
+          }}
+        />
+      )}
+    </div>
   );
 }
 ```

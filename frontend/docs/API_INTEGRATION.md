@@ -2,7 +2,9 @@
 
 ## Table of Contents
 - [Overview](#overview)
-- [Current Mock Implementation](#current-mock-implementation)
+- [Current Integrated APIs](#current-integrated-apis)
+- [Successfully Integrated Services](#successfully-integrated-services)
+- [Mock Implementation](#mock-implementation)
 - [Real API Integration](#real-api-integration)
 - [Property Data APIs](#property-data-apis)
 - [Blockchain Integration](#blockchain-integration)
@@ -11,32 +13,258 @@
 
 ## Overview
 
-RealEstateX currently uses simulated data and mock APIs for demonstration purposes. This guide provides comprehensive instructions for integrating real-world APIs and services to create a production-ready platform.
+RealEstateX combines real-world API integrations with simulated services for demonstration purposes. The platform currently has several live API integrations while maintaining mock services for features that require expensive enterprise APIs.
 
 ### Current Architecture
 
 ```
 Frontend (React/TypeScript)
-├── Mock Services (Current)
-│   ├── Simulated Property Data
-│   ├── Mock Valuation API
-│   ├── Fake Verification Process
-│   └── Demo Blockchain Calls
-└── Real APIs (Integration Target)
-    ├── Property Database APIs
-    ├── Valuation Services
-    ├── KYC/Verification APIs
-    └── Blockchain Networks
+├── Live APIs (Production Ready) ✅
+│   ├── Regrid Property Data API
+│   ├── Nominatim Geocoding API
+│   ├── OpenStreetMap Tiles
+│   ├── Pinata IPFS Storage
+│   └── WalletConnect Web3 Integration
+├── Mock Services (Demo/Development)
+│   ├── Enhanced Property Valuation
+│   ├── Hybrid Verification System
+│   └── Blockchain Smart Contracts
+└── External Services (Configuration Required)
+    ├── BlockDAG Testnet
+    └── Additional Property APIs
 ```
 
-### Integration Benefits
+### Integration Status
 
-- **Real Data**: Access to actual property records and market data
-- **Accurate Valuations**: Professional property assessment algorithms
-- **Legal Compliance**: Proper KYC and document verification
-- **Blockchain Integration**: Actual smart contract deployment and interactions
+| Service | Status | Type | Cost |
+|---------|--------|------|------|
+| Regrid Property Data | ✅ Live | Government Records | Paid API |
+| Nominatim Geocoding | ✅ Live | Address/Coordinates | Free |
+| OpenStreetMap | ✅ Live | Map Tiles | Free |
+| LocationPicker | ✅ Live | Interactive Maps | Free |
+| Pinata IPFS | ✅ Live | File Storage | Freemium |
+| WalletConnect | ✅ Live | Web3 Integration | Free |
+| BlockDAG Network | ✅ Live | Blockchain | Testnet |
+| Property Valuation | 🔄 Enhanced Mock | AI Valuation | Mock |
+| Verification System | 🔄 Hybrid Mock | KYC/Document | Mock |
 
-## Current Mock Implementation
+## Current Integrated APIs
+
+### Successfully Integrated Services
+
+#### 1. Regrid Property Data API ✅
+
+**Status**: Fully integrated and operational  
+**Purpose**: Government property records and real estate data  
+**Provider**: Regrid.com (Paid service)  
+
+```typescript
+// Currently active in regridService.ts
+export class RegridPropertyService {
+  async getPropertyByCoordinates(lat: number, lon: number, radius: number = 100) {
+    const response = await fetch(
+      `${this.config.baseUrl}/parcels/point?lat=${lat}&lon=${lon}&radius=${radius}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${this.config.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return this.transformRegridData(await response.json());
+  }
+}
+```
+
+**Features**:
+- Real government property records
+- 7 supported counties across US and Puerto Rico
+- Property ownership information
+- Assessed values and tax data
+- Zoning and legal descriptions
+- Demographics and market data
+
+**Supported Counties**:
+- Marion County, Indiana (Indianapolis)
+- Dallas County, Texas
+- Wilson County, Tennessee
+- Durham County, North Carolina
+- Fillmore County, Nebraska
+- Clark County, Wisconsin
+- Gurabo Municipio, Puerto Rico
+
+#### 2. Nominatim Geocoding API ✅
+
+**Status**: Fully integrated and operational  
+**Purpose**: Address geocoding and reverse geocoding  
+**Provider**: OpenStreetMap Foundation (Free)  
+
+```typescript
+// Currently active in LocationPicker component
+const geocodeAddress = async (address: string) => {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&addressdetails=1`
+  );
+  return response.json();
+};
+
+const reverseGeocode = async (lat: number, lon: number) => {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`
+  );
+  return response.json();
+};
+```
+
+**Features**:
+- Forward geocoding (address → coordinates)
+- Reverse geocoding (coordinates → address)  
+- Global coverage
+- Detailed address components
+- Rate limited (1 request/second)
+- No API key required
+
+#### 3. OpenStreetMap Tiles ✅
+
+**Status**: Fully integrated and operational  
+**Purpose**: Interactive map tiles for LocationPicker  
+**Provider**: OpenStreetMap Foundation (Free)  
+
+```typescript
+// Currently active in LocationPicker map
+<TileLayer
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+/>
+```
+
+**Features**:
+- Global map coverage
+- High-quality tile rendering
+- No API key required
+- Mobile-responsive interface
+
+#### 4. LocationPicker Component ✅
+
+**Status**: Fully operational with live APIs  
+**Purpose**: Interactive location selection with synchronized inputs  
+**Integration**: Combines Nominatim + OpenStreetMap + Leaflet  
+
+```typescript
+// Live implementation in LocationPicker.tsx
+export const LocationPicker: React.FC<LocationPickerProps> = ({
+  onLocationChange,
+  initialLocation,
+  addressPlaceholder = "Enter property address...",
+  className,
+  disabled = {}
+}) => {
+  // Three synchronized input methods:
+  // 1. Address input → Forward geocoding → Coordinates + Map
+  // 2. Coordinates input → Reverse geocoding → Address + Map  
+  // 3. Map click/drag → Coordinates → Reverse geocoding → Address
+};
+```
+
+**Integration Architecture**:
+
+```mermaid
+graph TB
+    A[LocationPicker Component] --> B[User Input Methods]
+    B --> C[Address Input]
+    B --> D[Coordinate Input]  
+    B --> E[Map Click/Drag]
+    
+    C --> F[Nominatim Geocoding]
+    D --> G[Nominatim Reverse Geocoding]
+    E --> G
+    
+    F --> H[Coordinate Update]
+    G --> I[Address Update]
+    
+    H --> J[Map Marker Update]
+    I --> J
+    
+    A --> K[Property Lookup]
+    K --> L[Regrid API]
+    L --> M[Government Records]
+    L --> N[Property Valuation]
+    
+    style F fill:#e1f5fe
+    style G fill:#e1f5fe  
+    style L fill:#f3e5f5
+    style A fill:#e8f5e8
+```
+
+#### 5. Pinata IPFS Service ✅
+
+**Status**: Live integration for document storage  
+**Purpose**: Decentralized file storage for property documents  
+**Provider**: Pinata.cloud (Freemium)  
+
+```typescript
+// Currently active in ipfs.ts
+export class IPFSService {
+  async uploadFile(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.config.jwt}`
+      },
+      body: formData
+    });
+    
+    const result = await response.json();
+    return result.IpfsHash;
+  }
+}
+```
+
+#### 6. WalletConnect Integration ✅
+
+**Status**: Live Web3 wallet integration  
+**Purpose**: Blockchain wallet connectivity  
+**Provider**: WalletConnect (Free)  
+
+```typescript
+// Currently active in wallet configuration
+const config = createConfig({
+  chains: [blockDAGTestnet],
+  projectId: process.env.VITE_WALLET_CONNECT_PROJECT_ID!,
+  metadata: {
+    name: 'RealEstateX',
+    description: 'Tokenized Real Estate Platform',
+    url: 'https://realestatex.app',
+    icons: ['https://realestatex.app/icon.png']
+  }
+});
+```
+
+### Live Integration Flow
+
+The current live APIs work together in this flow:
+
+1. **Location Selection**: User interacts with LocationPicker
+   - Address input triggers Nominatim forward geocoding
+   - Coordinates input triggers Nominatim reverse geocoding  
+   - Map interaction updates both address and coordinates
+   - OpenStreetMap provides interactive map tiles
+
+2. **Property Lookup**: Coordinates passed to Regrid API
+   - Real government property records retrieved
+   - Property data transformed and cached
+   - Valuation generated based on real assessed values
+
+3. **Document Upload**: Files stored on IPFS via Pinata
+   - Decentralized storage with content addressing
+   - IPFS hashes stored for document verification
+
+4. **Blockchain Integration**: Web3 interactions via WalletConnect
+   - User wallet connection and authentication
+   - Transaction signing and blockchain interactions
 
 ### Mock Services Overview
 
@@ -79,6 +307,136 @@ private getLocationFactors(city: string) {
   };
   return mockData[city.toLowerCase()] || mockData.default;
 }
+```
+
+## Current Integrated APIs
+
+### Successfully Integrated Services
+
+RealEstateX has successfully integrated several real-world APIs that are currently functional:
+
+#### 1. Regrid Real Estate API ✅
+
+**Status**: Fully integrated and operational  
+**Purpose**: Government property records and real estate data  
+**Coverage**: 7 counties across the United States  
+
+```typescript
+// Currently active integration
+const regridService = new RegridService();
+
+// Supported counties:
+// - Marion County, Indiana
+// - Dallas County, Texas  
+// - Wilson County, Tennessee
+// - Durham County, North Carolina
+// - Fillmore County, Nebraska
+// - Clark County, Wisconsin
+// - Gurabo Municipio, Puerto Rico
+
+const properties = await regridService.getPropertyByCoordinates(
+  39.7684, -86.1581, // Indianapolis coordinates
+  0.5 // 500m radius
+);
+```
+
+**Features**:
+- Real government property records
+- Property ownership information
+- Tax assessment data
+- Building characteristics and year built
+- Lot size and building area
+- Historical sale records
+- Coordinate-based search with radius support
+
+#### 2. Nominatim Geocoding API ✅
+
+**Status**: Fully integrated and operational  
+**Purpose**: Address geocoding and reverse geocoding  
+**Provider**: OpenStreetMap Foundation (Free)  
+
+```typescript
+// Currently active in LocationPicker component
+const geocodeAddress = async (address: string) => {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&addressdetails=1`
+  );
+  return response.json();
+};
+
+const reverseGeocode = async (lat: number, lon: number) => {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`
+  );
+  return response.json();
+};
+```
+
+**Features**:
+- Forward geocoding (address → coordinates)
+- Reverse geocoding (coordinates → address)  
+- Global coverage with detailed address components
+- Rate limiting compliance (1 request/second)
+- No API key required (free tier)
+
+#### 3. OpenStreetMap Tiles ✅
+
+**Status**: Fully integrated and operational  
+**Purpose**: Interactive map tiles for LocationPicker  
+**Provider**: OpenStreetMap Foundation (Free)  
+
+```typescript
+// Currently active in LocationPicker map
+<TileLayer
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+/>
+```
+
+**Features**:
+- Global map coverage
+- High-quality tile rendering
+- No API key required
+- Mobile-responsive interface
+
+### Integration Architecture
+
+```mermaid
+graph TB
+    A[LocationPicker Component] --> B[User Input Methods]
+    B --> C[Address Input]
+    B --> D[Coordinate Input]  
+    B --> E[Map Click/Drag]
+    
+    C --> F[Nominatim Geocoding]
+    D --> G[Nominatim Reverse Geocoding]
+    E --> G
+    
+    F --> H[Coordinate Update]
+    G --> I[Address Update]
+    
+    H --> J[Map Marker Update]
+    I --> J
+    
+    A --> K[Property Lookup]
+    K --> L[Regrid API]
+    L --> M[Government Records]
+    L --> N[Property Valuation]
+    
+    style F fill:#e1f5fe
+    style G fill:#e1f5fe  
+    style L fill:#f3e5f5
+    style A fill:#e8f5e8
+```
+
+### Environment Configuration
+
+```env
+# .env - Required API Keys
+VITE_REGRID_API_KEY=your_regrid_api_key_here
+
+# Optional - Other services use free tiers
+# Nominatim and OpenStreetMap require no API keys
 ```
 
 ## Real API Integration

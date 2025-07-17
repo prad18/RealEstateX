@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LocationPicker } from '../LocationPicker';
 import { regridService } from '@/services/regridService';
 
 interface PropertyDetails {
@@ -148,7 +149,13 @@ export const CoordinatePropertyLookup: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-8">
             Real Property Lookup
           </h1>
-          
+          <div className="mb-8">
+            <LocationPicker
+              onChange={({ lat, lon }) => {
+                setCoordinates(prev => ({ ...prev, lat: lat.toString(), lon: lon.toString() }));
+              }}
+            />
+          </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-blue-900 mb-2">Using Real Property Data</h3>
             <p className="text-blue-800 text-sm">
@@ -156,37 +163,8 @@ export const CoordinatePropertyLookup: React.FC = () => {
               Enter coordinates to look up actual property information from government records.
             </p>
           </div>
-
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Latitude *
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={coordinates.lat}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, lat: e.target.value }))}
-                  placeholder="39.7684"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Longitude *
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={coordinates.lon}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, lon: e.target.value }))}
-                  placeholder="-86.1581"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Search Radius (meters)
@@ -200,7 +178,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
                 />
               </div>
             </div>
-
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">Sample Coordinates:</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -214,13 +191,11 @@ export const CoordinatePropertyLookup: React.FC = () => {
                 </div>
               </div>
             </div>
-
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-800">{error}</p>
               </div>
             )}
-
             <button
               onClick={handleLookup}
               disabled={loading || !coordinates.lat || !coordinates.lon}

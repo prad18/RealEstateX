@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
+- [Recent Updates](#recent-updates)
 - [Services Documentation](#services-documentation)
 - [Components Documentation](#components-documentation)
 - [Configuration](#configuration)
@@ -9,12 +10,22 @@
 
 ## Architecture Overview
 
-The RealEstateX frontend follows a modern React architecture with clear separation of concerns:
+The RealEstateX frontend follows a modern React architecture with clear separation of concerns and real-world API integrations:
 
 ```
 src/
 ├── components/          # React UI components
+│   ├── LocationPicker.tsx      # NEW: Interactive location selection
+│   ├── property/               # Property management
+│   │   ├── PropertyRegistration.tsx    # UPDATED: Coordinate-based
+│   │   └── CoordinatePropertyLookup.tsx # UPDATED: Real data
+│   └── dashboard/              # Main application flow
 ├── services/           # Business logic services  
+│   ├── regridService.ts        # NEW: Real estate data API
+│   ├── verificationService.ts  # Enhanced hybrid verification
+│   ├── propertyValuation.ts    # Advanced valuation logic
+│   ├── web3Service.ts          # Blockchain interactions
+│   └── ipfs.ts                 # Decentralized storage
 ├── config/             # Configuration files
 ├── hooks/              # Custom React hooks
 ├── utils/              # Utility functions
@@ -22,12 +33,44 @@ src/
 └── assets/             # Static assets
 ```
 
+## Recent Updates
+
+### 🆕 **What's New in This Release**
+
+#### ✅ **Live API Integrations**
+- **Regrid Property Data API**: Real government property records for 7 counties
+- **Nominatim Geocoding**: Free address/coordinate conversion via OpenStreetMap
+- **LocationPicker Component**: Interactive maps with three-way synchronization
+- **OpenStreetMap Tiles**: Global map coverage with Leaflet integration
+
+#### 🔄 **Enhanced Components**
+- **PropertyRegistration**: Now uses coordinate-based property lookup with real data
+- **CoordinatePropertyLookup**: Displays actual government records and valuations
+- **Dashboard**: Added property lookup flow with interactive location selection
+
+#### 🏗️ **Architecture Improvements**
+- **Real-time synchronization**: Address, coordinates, and map inputs stay in sync
+- **Debounced API calls**: Prevents excessive requests during user input
+- **Caching system**: 24-hour cache for property data to improve performance
+- **Error handling**: Graceful fallbacks for API failures and network issues
+
+#### 🌐 **Supported Locations**
+Property data now available for:
+- Marion County, Indiana (Indianapolis)
+- Dallas County, Texas
+- Wilson County, Tennessee  
+- Durham County, North Carolina
+- Fillmore County, Nebraska
+- Clark County, Wisconsin
+- Gurabo Municipio, Puerto Rico
+
 ### Design Patterns Used
 
 1. **Service Layer Pattern**: Business logic separated into service classes
 2. **Custom Hooks Pattern**: Reusable stateful logic
 3. **Compound Components**: Complex UI components broken into smaller parts
 4. **Provider Pattern**: Context for global state management
+5. **API Integration Pattern**: Real-world service integration with fallbacks
 
 ## Services Documentation
 
@@ -314,6 +357,132 @@ const jsonResult = await ipfsService.uploadJSON(metadata, 'property-metadata.jso
 
 ## Components Documentation
 
+### 🗺️ LocationPicker Component
+
+**File**: `src/components/LocationPicker.tsx`
+
+Interactive geolocation component providing three synchronized input methods for property location selection.
+
+#### Key Features
+
+- **Three-way synchronization**: Address input, coordinate input, and interactive map
+- **Forward geocoding**: Address → Coordinates using Nominatim API
+- **Reverse geocoding**: Coordinates → Address with detailed location info
+- **Interactive map**: Leaflet map with OpenStreetMap tiles and draggable markers
+- **Real-time sync**: All input methods update each other automatically
+- **Debounced input**: Prevents excessive API calls during user typing
+- **Rate limiting**: Respects Nominatim API rate limits (1 request/second)
+- **Error handling**: Graceful handling of geocoding failures
+
+#### Component Interface
+
+```typescript
+interface LocationPickerProps {
+  onLocationChange: (location: LocationData) => void;
+  initialLocation?: Partial<LocationData>;
+  addressPlaceholder?: string;
+  className?: string;
+  disabled?: {
+    address?: boolean;
+    coordinates?: boolean;
+    map?: boolean;
+  };
+}
+
+interface LocationData {
+  address: string;
+  latitude: number;
+  longitude: number;
+  city?: string;
+  state?: string;
+  country?: string;
+  postcode?: string;
+}
+```
+
+#### Usage Example
+
+```typescript
+import { LocationPicker } from '@/components/LocationPicker';
+
+function PropertyLocationForm() {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  
+  return (
+    <div className="space-y-4">
+      <LocationPicker
+        onLocationChange={setLocation}
+        addressPlaceholder="Enter property address..."
+        className="w-full"
+      />
+      
+      {location && (
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <p><strong>Address:</strong> {location.address}</p>
+          <p><strong>Coordinates:</strong> {location.latitude}, {location.longitude}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+#### API Integrations
+
+- **Nominatim API**: OpenStreetMap's free geocoding service
+- **OpenStreetMap Tiles**: Global map coverage
+- **React-Leaflet**: Interactive mapping components
+
+### 🏢 Regrid Property Service
+
+**File**: `src/services/regridService.ts`
+
+Real estate data service integrating with Regrid API for government property records.
+
+#### Key Features
+
+- **Government records**: Access to official property data
+- **7 county support**: Marion IN, Dallas TX, Wilson TN, Durham NC, Fillmore NE, Clark WI, Gurabo PR
+- **Property lookup**: Search by coordinates with radius
+- **Data transformation**: Standardized property details format
+- **Caching system**: 24-hour cache for performance
+- **Valuation generation**: Market-based property valuations
+
+#### Core Methods
+
+```typescript
+class RegridPropertyService {
+  async getPropertyByCoordinates(lat: number, lon: number, radius?: number): Promise<{
+    success: boolean;
+    data?: PropertyDetails;
+    error?: string;
+  }>
+  
+  async getPropertyValuation(lat: number, lon: number): Promise<{
+    success: boolean;
+    data?: PropertyValuation;
+    error?: string;
+  }>
+}
+```
+
+#### Usage Example
+
+```typescript
+import { regridService } from '@/services/regridService';
+
+// Look up property by coordinates
+const result = await regridService.getPropertyByCoordinates(39.7684, -86.1581, 100);
+
+if (result.success && result.data) {
+  console.log('Property found:', result.data.address);
+  console.log('Owner:', result.data.owner);
+  console.log('Assessed Value:', result.data.value.total);
+} else {
+  console.error('Property lookup failed:', result.error);
+}
+```
+
 ### 🎛️ Dashboard Component
 
 **File**: `src/components/dashboard/Dashboard.tsx`
@@ -322,15 +491,16 @@ The main application interface that orchestrates the entire user workflow.
 
 #### Key Features
 
-- **Multi-flow management**: Handles upload → register → verify workflow
+- **Multi-flow management**: Handles property-lookup → upload → register → verify workflow
 - **Asset overview**: Displays user's property NFTs and $HOMED balance
 - **Navigation**: Step-by-step progress tracking
 - **Real-time updates**: Live data refresh
+- **Location integration**: Integrated LocationPicker for property search
 
 #### Component State
 
 ```typescript
-const [currentFlow, setCurrentFlow] = useState<'dashboard' | 'upload' | 'register' | 'verify'>('dashboard')
+const [currentFlow, setCurrentFlow] = useState<'dashboard' | 'property-lookup' | 'upload' | 'register' | 'verify'>('dashboard')
 const [uploadedDocuments, setUploadedDocuments] = useState<Array<{ file: File; ipfs_hash: string }>>([])
 const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null)
 ```
@@ -342,16 +512,24 @@ const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null)
    - Quick action buttons
    - Property list display
 
-2. **Upload Flow**
+2. **Property Lookup Flow**
+   - LocationPicker component integration
+   - Regrid API property search
+   - Real government records display
+   - Interactive map interface
+
+3. **Upload Flow**
    - Document upload component
    - IPFS integration
    - Progress tracking
 
-3. **Registration Flow**
-   - Property details form
+4. **Registration Flow**
+   - Property details form (now with coordinates support)
+   - Real property data integration
    - Valuation display
    - Consent signing
 
+4. **Verification Flow**
 4. **Verification Flow**
    - Status tracking
    - Phase progress
@@ -361,40 +539,54 @@ const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null)
 
 **File**: `src/components/property/PropertyRegistration.tsx`
 
-Comprehensive property registration form with valuation and consent management.
+Comprehensive property registration component now supporting coordinate-based property lookup with real government data.
 
 #### Key Features
 
-- **Multi-step form**: Property details → Valuation → Consent
-- **Real-time valuation**: Integrated property pricing
-- **Message signing**: User consent verification
-- **Error handling**: Comprehensive validation
+- **Coordinate-based lookup**: Uses latitude/longitude for property search
+- **Real property data**: Integration with Regrid API for government records
+- **Multi-step workflow**: Coordinates → Property Review → Consent
+- **Document integration**: Works with uploaded IPFS documents
+- **Message signing**: User consent verification for real property data
 
 #### Component Phases
 
-1. **Form Phase**
+1. **Coordinates Phase**
    ```typescript
-   // Property details collection
-   const [propertyDetails, setPropertyDetails] = useState<PropertyDetails>({
-     address: '',
-     city: '',
-     state: '',
-     propertyType: 'residential',
-     area: 0
+   // Coordinate input for property lookup
+   const [coordinates, setCoordinates] = useState<CoordinateInput>({
+     lat: '',
+     lon: '',
+     radius: '100'
    })
+   
+   // Fetch real property data from Regrid API
+   const result = await regridService.getPropertyByCoordinates(lat, lon, radius);
+   if (result.success) {
+     setPropertyData(result.data); // Real government records
+   }
    ```
 
-2. **Valuation Phase**
+2. **Property Review Phase**
    ```typescript
-   // Get property valuation
-   const valuationResult = await propertyValuationService.getPropertyValuation(propertyDetails)
-   const mintCalculation = propertyValuationService.calculateMintingPotential(valuationResult.estimatedValue)
+   // Display real property data from government records
+   interface PropertyData {
+     address: string;
+     city: string;
+     state: string;
+     area: number;
+     propertyType: 'residential' | 'commercial' | 'plot';
+     owner: string;
+     value: { total: number };
+     coordinates: { lat: number; lon: number };
+   }
    ```
 
 3. **Consent Phase**
    ```typescript
-   // Sign consent message
-   const signature = await signMessageAsync({ message: consentMessage })
+   // Sign consent message for real property ownership
+   const consentMessage = `I confirm ownership of the property at ${propertyData.address}...`;
+   const signature = await signMessageAsync({ message: consentMessage });
    ```
 
 #### Usage Flow

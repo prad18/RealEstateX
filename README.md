@@ -14,7 +14,8 @@
 - 💰 **$HOMED Stablecoin** - Property-backed stable cryptocurrency
 - 📄 **IPFS Document Storage** - Decentralized document management
 - 🔍 **Hybrid Verification** - AI Oracle + Manual review system
-- 🔗 **Web3 Integration** - Full blockchain connectivity
+- �️ **Interactive Location Picker** - Synchronized address/coordinates/map selection
+- �🔗 **Web3 Integration** - Full blockchain connectivity
 - 📊 **Property Valuation** - Multi-source price estimation
 - ⚡ **Fractional Ownership** - Buy/sell property fractions
 - 🚨 **Liquidation System** - Risk management and alerts
@@ -22,6 +23,7 @@
 ### **Technology Stack**
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS + Headless UI
+- **Maps & Geolocation**: Leaflet + React-Leaflet + OpenStreetMap
 - **Web3**: wagmi + viem + Web3Modal
 - **Storage**: IPFS via Pinata
 - **Blockchain**: BlockDAG (Testnet)
@@ -38,11 +40,13 @@ RealEstateX/
 │   │   │   ├── property/       # Property management
 │   │   │   ├── upload/         # Document upload
 │   │   │   ├── verification/   # Verification status
-│   │   │   └── wallet/         # Wallet integration
+│   │   │   ├── wallet/         # Wallet integration
+│   │   │   └── LocationPicker.tsx # Interactive geolocation component
 │   │   ├── services/           # Business logic services
 │   │   │   ├── web3Service.ts        # Blockchain interactions
 │   │   │   ├── ipfs.ts               # IPFS file storage
 │   │   │   ├── verificationService.ts # Hybrid verification
+│   │   │   ├── regridService.ts      # Real estate data API
 │   │   │   └── propertyValuation.ts  # Property pricing
 │   │   ├── config/             # Configuration files
 │   │   ├── hooks/              # Custom React hooks
@@ -79,13 +83,54 @@ RealEstateX/
 3. **Environment setup**
    ```bash
    cp env.example .env
-   # Edit .env with your configuration
    ```
+   - Navigate to your Frontend folder in your project directory
+   - At the root of the Frontend folder (same level as package.json), create a file named: `.env`
+   - Edit `.env` with your configuration (see Environment Variables section below)
 
 4. **Start development server**
    ```bash
    npm run dev
    ```
+
+### **Platform Setup Guide**
+
+#### **Step 1: MetaMask Wallet Setup**
+1. Go to your browser and download the MetaMask Extension
+2. Press "Get Started" and create a password (make sure you don't forget it)
+
+#### **Step 2: BlockDAG Network Configuration**
+1. Go to BlockDAG Primordial: [https://primordial.bdagscan.com/](https://primordial.bdagscan.com/)
+2. Press "Add BDAG Network"
+3. Go to Faucet → Add your wallet address → Enter amount → Press "Send me BDAG" → Transaction Successful
+
+#### **Step 3: Pinata IPFS Setup**
+1. Go to [Pinata](https://pinata.cloud/) and create an account
+2. Navigate to API Keys → Create new key → Name it and enable admin → Press create
+3. Copy the JWT secret key and paste it in your `.env` file as `VITE_PINATA_JWT`
+
+#### **Step 4: WalletConnect Configuration**
+1. Go to [WalletConnect Cloud](https://cloud.walletconnect.com/)
+2. Login → New project (appkit) → Navigate to 'secret' → Name it and choose APIAuth
+3. Copy the API key and paste it in your `.env` file as `VITE_WALLET_CONNECT_PROJECT_ID`
+
+#### **Step 5: Regrid Real Estate API Setup**
+1. Go to [Regrid](https://regrid.com/) and navigate to Datastore
+2. Click API Access → Click "Try the Parcel API Sandbox Now" → Create an account
+3. Once account is created, click "GENERATE API TOKEN"
+4. Copy the API key and paste it in your `.env` file as `VITE_REGRID_API_KEY`
+
+#### **Step 6: Testing the Application**
+1. Run the frontend server and click "Connect Wallet"
+2. Choose your MetaMask account and you will be navigated to the website
+3. Property Lookup works for the following 7 supported counties:
+   - Marion County, Indiana
+   - Dallas County, Texas
+   - Wilson County, Tennessee
+   - Durham County, North Carolina
+   - Fillmore County, Nebraska
+   - Clark County, Wisconsin
+   - Gurabo Municipio, Puerto Rico
 
 5. **Access the application**
    - Open `http://localhost:5173`
@@ -103,6 +148,12 @@ VITE_PINATA_GATEWAY=https://gateway.pinata.cloud
 VITE_BLOCKDAG_RPC_URL=https://rpc.blockdag.network
 VITE_BLOCKDAG_CHAIN_ID=1043
 
+# WalletConnect Configuration
+VITE_WALLET_CONNECT_PROJECT_ID=your_wallet_connect_project_id
+
+# Real Estate Data API
+VITE_REGRID_API_KEY=your_regrid_api_key
+
 # API Keys (for real estate data - optional)
 VITE_PROPTIGER_API_KEY=your_api_key
 VITE_HOUSING_API_KEY=your_api_key
@@ -118,34 +169,48 @@ graph TB
     B --> C[Property Registration]
     B --> D[Document Upload]
     B --> E[Verification Status]
+    B --> F[Location Picker]
     
-    C --> F[Property Valuation Service]
-    D --> G[IPFS Service]
-    E --> H[Verification Service]
+    C --> G[Property Valuation Service]
+    C --> F
+    D --> H[IPFS Service]
+    E --> I[Verification Service]
+    F --> J[Regrid Service]
+    F --> K[Nominatim API]
     
-    F --> I[Mock Property APIs]
-    G --> J[Pinata IPFS]
-    H --> K[Oracle Analysis]
-    H --> L[Manual Review]
+    G --> L[Mock Property APIs]
+    H --> M[Pinata IPFS]
+    I --> N[Oracle Analysis]
+    I --> O[Manual Review]
+    J --> P[Real Estate Data]
+    K --> Q[OpenStreetMap Geocoding]
     
-    A --> M[Web3 Service]
-    M --> N[Smart Contracts]
-    M --> O[Wallet Connection]
+    A --> R[Web3 Service]
+    R --> S[Smart Contracts]
+    R --> T[Wallet Connection]
 ```
 
 ### **Data Flow**
 
 1. **Property Registration Flow**
    ```
-   User Input → Document Upload → IPFS Storage → Property Valuation → 
-   Consent Signing → Verification Submission → Oracle Analysis → 
-   Risk Assessment → Manual Review → Final Approval/Rejection
+   User Input → Location Selection (Address/Coordinates/Map) → 
+   Real Estate Data Lookup → Document Upload → IPFS Storage → 
+   Property Valuation → Consent Signing → Verification Submission → 
+   Oracle Analysis → Risk Assessment → Manual Review → Final Approval/Rejection
    ```
 
 2. **Verification System Flow**
    ```
    Document Upload → Oracle Analysis (AI) → Risk Assessment → 
    Manual Review Queue → Human Decision → Final Status Update
+   ```
+
+3. **Location Selection Flow**
+   ```
+   Address Input → Forward Geocoding → Coordinates Update → Map Update OR
+   Coordinates Input → Reverse Geocoding → Address Update → Map Update OR
+   Map Click/Drag → Coordinates Update → Reverse Geocoding → Address Update
    ```
 
 ## 📖 **Detailed Component Documentation**
@@ -196,6 +261,16 @@ Handles decentralized file storage via Pinata.
 - File retrieval and validation
 - Progress tracking
 
+#### **5. Regrid Service (`regridService.ts`)**
+Real estate data API integration for property information and valuation.
+
+**Features:**
+- Property lookup by coordinates with radius support
+- Government records data mapping
+- Property valuation generation with market factors
+- Support for 7 counties (Marion IN, Dallas TX, Wilson TN, Durham NC, Fillmore NE, Clark WI, Gurabo PR)
+- API key management and error handling
+
 ### **🧩 React Components**
 
 #### **1. Dashboard (`Dashboard.tsx`)**
@@ -233,6 +308,18 @@ Drag-and-drop file upload with IPFS integration.
 - Progress tracking
 - IPFS hash display
 - Error handling
+
+#### **5. Location Picker (`LocationPicker.tsx`)**
+Interactive geolocation component with synchronized address/coordinates/map selection.
+
+**Features:**
+- Forward geocoding (address → coordinates)
+- Reverse geocoding (coordinates → address)
+- Interactive Leaflet map with drag/click functionality
+- Real-time synchronization between all three input methods
+- Debounced API calls with rate limiting (Nominatim API)
+- OpenStreetMap integration
+- User-friendly input validation and error handling
 
 ## 🔐 **Security Features**
 
