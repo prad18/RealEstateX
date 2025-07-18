@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { web3Service, type PropertyData, type TokenBalance } from '@/services/web3Service';
+import { web3Service, type PropertyData} from '@/services/web3Service';
 import { DocumentUpload } from '@/components/upload/DocumentUpload';
 import { PropertyRegistration } from '@/components/property/PropertyRegistration';
 import { VerificationStatus } from '@/components/verification/VerificationStatus';
 import { CoordinatePropertyLookup } from '@/components/property/CoordinatePropertyLookup';
 import { FaucetLink } from '@/components/wallet/FaucetLink';
 import { type VerificationResult } from '@/services/verificationService';
+import { balanceof , getCountofProperty } from '@/services/contracts'
 
 export const Dashboard: React.FC = () => {
   const { address, isConnected } = useAccount();
   const [properties, setProperties] = useState<PropertyData[]>([]);
-  const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
+  // const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   // New state for property registration flow
   const [currentFlow, setCurrentFlow] = useState<'dashboard' | 'property-lookup' | 'upload' | 'register' | 'verify'>('dashboard');
   const [uploadedDocuments, setUploadedDocuments] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
   const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null);
+  
+  //The state added by Jithesh for HomedBalance checking;
+  const[balance , setBalance] = useState<string>("0");
+  const[PropertyCount , setPropertyCount] = useState<string>("0"); //This state I added to check the number of Property NFT that the User Holds;
 
   // Fetch data when wallet connects
   useEffect(() => {
@@ -31,13 +36,15 @@ export const Dashboard: React.FC = () => {
     
     try {
       setIsLoading(true);
-      const [userProperties, balance] = await Promise.all([
+      const [userProperties, balance , PropertyCount] = await Promise.all([
         web3Service.getUserProperties(address),
-        web3Service.getTokenBalance(address)
-      ]);
+        balanceof(address), //Here I call the balanceof function which is defined in the services/contracts;
+        getCountofProperty(address),
+        ]);
       
       setProperties(userProperties);
-      setTokenBalance(balance);
+      setBalance(balance);
+      setPropertyCount(PropertyCount);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
@@ -147,12 +154,12 @@ export const Dashboard: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Your Assets</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">{tokenBalance?.propertyCount || 0}</div>
+                <div className="text-3xl font-bold text-blue-600">{ PropertyCount|| 0}</div>
                 <div className="text-sm text-gray-600">Property NFTs</div>
                 <div className="text-xs text-gray-500 mt-1">Real estate tokens owned</div>
               </div>
               <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                <div className="text-3xl font-bold text-green-600">{tokenBalance?.homedBalance || '0'}</div>
+                <div className="text-3xl font-bold text-green-600">{balance|| '0'}</div>
                 <div className="text-sm text-gray-600">$HOMED Balance</div>
                 <div className="text-xs text-gray-500 mt-1">Stablecoins available</div>
               </div>

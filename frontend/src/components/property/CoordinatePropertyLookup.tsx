@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { regridService } from '@/services/regridService';
+import { useAccount , useSignMessage } from 'wagmi';
+import { mintPropertyNFT } from '@/services/contracts';
 
 interface PropertyDetails {
   address: string;
@@ -138,6 +140,39 @@ export const CoordinatePropertyLookup: React.FC = () => {
       case 'positive': return 'text-green-600';
       case 'negative': return 'text-red-600';
       default: return 'text-gray-600';
+    }
+  };
+  
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const [consentSigned , setConsentSigned] = useState(false);
+  const [minting , setMinting] = useState(false);
+  const [mintSuccess , setMintSuccess] = useState(false);
+  const [mintError , setMintError] = useState<string | null>(null);
+
+  // Function to handle user consent and minting the NFT
+  const handleConsentAndMint = async () =>{
+    if(!address || !valuation || !propertyData) return;
+    setMintError(null);
+    setMinting(true);
+    setMintSuccess(false);
+    try{
+      const consetMessage = `I , ${address} , consent to mint an NFT for the property at ${propertyData.address} with a valuation of ${valuation.estimatedValue}`;
+      console.log(address); // debug statement
+      const signature = await signMessageAsync({message : consetMessage});
+      if(!signature) throw new Error('Consent Signature Failed');
+      setConsentSigned(true);
+      const ipfsHash =  'Qma6e8dovN9UiaQ3PiDWWU5zEVr7h4h8E3xFtL3mkoD5aK'; // Placeholder IPFS hash
+      await mintPropertyNFT(address , ipfsHash , valuation.estimatedValue);
+      setMintSuccess(true);
+    }
+    catch(err : any)
+    {
+       console.log(err.message);
+       setMintError(err.message || 'Minting Failed');
+    }
+    finally{
+      setMinting(false);
     }
   };
 
@@ -494,6 +529,26 @@ export const CoordinatePropertyLookup: React.FC = () => {
           <div className="mt-6 text-xs text-gray-500">
             Last updated: {new Date(valuation.lastUpdated).toLocaleString()}
           </div>
+        </div>
+        {/* Consent and Mint Button */}
+        <div className='mt-8 flex flex-col items-center'>
+          <button
+            onClick={handleConsentAndMint}
+            disabled={minting || !address}
+            className="w-full max-w-md bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {minting ? 'Minting NFT...' : 'Sign Consent & Mint Property NFT'}
+          </button>
+          {mintSuccess && (
+            <div className="mt-4 w-full max-w-md bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-800 text-center">Successfully Minted!</p>
+            </div>
+          )}
+          {mintError && (
+            <div className="mt-4 w-full max-w-md bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className='text-red-800 text-center'>{mintError}</p>
+            </div>
+          )}
         </div>
       </div>
     );
