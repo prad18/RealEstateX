@@ -11,19 +11,18 @@ declare global {
 
 export const CONTRACTS = {
   propertyNft: {
-    address: "0x359f25566A2Ec3F93E23571869b1b7930E2Da5f7",
+    address: "0x44Df877FE3e1121fA2Dfbaa4a3D5bEaE5a031a15",
     abi: VerifiedPropertyNFT.output.abi,
   },
   homedToken: {
-    address: "0x8870F17a0Ecba1b9DD4866b576d41e237D0e3066",
+    address: "0x6Fa1baFB83D83f94D6a42787533382abe3Db2f53",
     abi: HOMEDToken.output.abi,
   },
   vaultManager: {
-    address: "0x9295A651C8Fe7aC4958740e44Df413CeA9281E64",
+    address: "0x4c1a40E5ba4E64436a77734f05Bc363fDf68ce9b",
     abi: VaultManager.output.abi,
   }
 };
- 
 // This function connects to the blockchain RPC endpoint via the local proxy.
 export function getRPCProvider(){
   const projectId = import.meta.env.VITE_INFURA_PROJECT_ID;
@@ -132,8 +131,17 @@ export async function mintPropertyNFT(to: string, ipfsHash: string, valuation: n
 // Function 2: Set the verification status of a property.
 export async function setPropertyVerified(tokenId:number , status:boolean , signer?:any) {
     const contract = await getContractInstance('propertyNft' , signer);
-    const tx = await contract.setVerfied(tokenId , status); // Note: Original function was setVerfied, might be a typo for setVerified
+    const tx = await contract.setVerified(tokenId , status); // Note: Original function was setVerfied, might be a typo for setVerified
     return tx.wait();
+}
+
+//Function to get the approval from the user ;
+export async function giveApproval(tokenId : number,signer?:any)
+{
+  const vaultAddress:string="0x4c1a40E5ba4E64436a77734f05Bc363fDf68ce9b";
+   const contracts = await getContractInstance('propertyNft',signer);
+   const tx = await contracts.approve(vaultAddress , tokenId);
+   return tx.wait();
 }
 
 // Function 3: Set the VaultManager address in the HOMEDToken contract.
@@ -147,7 +155,7 @@ export async function setVaultManager(address:string , signer ?:any) {
 export async function balanceof(address:string , signer ?:any) {
   const contracts = await getContractInstance('homedToken' , signer);
   const tx = await contracts.balanceOf(address);
-  return tx.wait(); // .wait() might not be needed for a read-only call. Consider removing for efficiency.
+  return tx; // .wait() might not be needed for a read-only call. Consider removing for efficiency.
 }
 
 // Function 5: Open a vault for a given NFT to mint tokens.
@@ -161,5 +169,31 @@ export async function openvault(tokenId:number , signer?:any){
 export async function getCountofProperty(address:string) {
    const contracts = await getContractInstance('propertyNft');
    const tx = await contracts.balanceOf(address);
-   return tx.toString();
+   const count= tx.toString();
+   return count;
+}
+
+export async function getnextTokenid(){
+  const contracts = await getContractInstance('homedToken');
+  const tx = await contracts.nextTokenId();
+  return parseInt(tx);
+} 
+
+//Function to get the token ids that a person owns;
+// Function to get the Property NFT token IDs that a person owns
+export async function getTokenIds(address: string): Promise<number[]> {
+  try {
+    const contract = await getContractInstance('propertyNft');
+    
+    // Use the getTokenIdsByOwner function from the VerifiedPropertyNFT contract
+    const tokenIds = await contract.getTokenIdsByOwner(address);
+    
+    // Convert BigNumber array to number array
+    const propertyTokenIds = tokenIds.map((id: any) => parseInt(id.toString()));
+    
+    return propertyTokenIds;
+  } catch (error) {
+    console.error('Error fetching user property token IDs:', error);
+    throw new Error('Failed to fetch user property token IDs');
+  }
 }

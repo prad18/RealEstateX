@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.30+commit.73712a01"
 	},
 	"language": "Solidity",
 	"output": {
@@ -327,9 +327,9 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/VaultManager.sol": "VaultManager"
+			"VaultManager.sol": "VaultManager"
 		},
-		"evmVersion": "paris",
+		"evmVersion": "prague",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -341,7 +341,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"contracts/VaultManager.sol": {
+		"VaultManager.sol": {
 			"keccak256": "0xa1f2dd088e8c3126020dc9aa8c04c366fca30af8e118c30aa1e5dfa851ca5d07",
 			"license": "MIT",
 			"urls": [

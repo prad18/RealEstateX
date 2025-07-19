@@ -41,7 +41,7 @@ export const Dashboard: React.FC = () => {
         balanceof(address), //Here I call the balanceof function which is defined in the services/contracts;
         getCountofProperty(address),
         ]);
-      
+      console.log(getCountofProperty(address));
       setProperties(userProperties);
       setBalance(balance);
       setPropertyCount(PropertyCount);

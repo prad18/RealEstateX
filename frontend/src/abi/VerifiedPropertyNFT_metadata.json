@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.30+commit.73712a01"
 	},
 	"language": "Solidity",
 	"output": {
@@ -240,6 +240,25 @@
 						"internalType": "bool",
 						"name": "verified",
 						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					}
+				],
+				"name": "getTokenIdsByOwner",
+				"outputs": [
+					{
+						"internalType": "uint256[]",
+						"name": "",
+						"type": "uint256[]"
 					}
 				],
 				"stateMutability": "view",
@@ -579,9 +598,9 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/VerfiedPropertyNFT.sol": "VerifiedPropertyNFT"
+			"VerifiedPropertyNFT.sol": "VerifiedPropertyNFT"
 		},
-		"evmVersion": "paris",
+		"evmVersion": "prague",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -593,12 +612,12 @@
 		"remappings": []
 	},
 	"sources": {
-		"contracts/VerfiedPropertyNFT.sol": {
-			"keccak256": "0xf8b82974704d4b8f1f10f1dc5985e6812b25e01fe3d2b847c0d17f1db2a5d77f",
+		"VerifiedPropertyNFT.sol": {
+			"keccak256": "0xab778ec1c8e2e40ca1e2bd7b221bb42d6a071e536ac8d1fc4404dd8baceb2217",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://80bec7caf382a5da2b6e8aa48414a86aee79304675eb53bdd11706783b4f2dad",
-				"dweb:/ipfs/QmXmDiAgxnXXbRfZa6dBK6RNGLReXjvmGXM7bCoaX4YgRX"
+				"bzz-raw://9a319f385cab928d0f942d5efb19d85c248db3182bff3accd229d99be6ac9841",
+				"dweb:/ipfs/QmYXbSH7FLX5rwvs8isBSMtajDwuyxVk1FzsQ6z1ajqBt1"
 			]
 		}
 	},

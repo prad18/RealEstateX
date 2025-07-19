@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.30+commit.73712a01"
 	},
 	"language": "Solidity",
 	"output": {
@@ -421,9 +421,9 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/HOMEDToken.sol": "HOMEDToken"
+			"HOMEDToken.sol": "HOMEDToken"
 		},
-		"evmVersion": "paris",
+		"evmVersion": "prague",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -435,7 +435,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"contracts/HOMEDToken.sol": {
+		"HOMEDToken.sol": {
 			"keccak256": "0x2b7c57017b7591d7a091812577bddabdd84f409e6b89dba313eea7d3c0bdc2ce",
 			"license": "MIT",
 			"urls": [

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { regridService } from '@/services/regridService';
 import { useAccount , useSignMessage } from 'wagmi';
-import { mintPropertyNFT } from '@/services/contracts';
+import { mintPropertyNFT , setPropertyVerified } from '@/services/contracts';
+import { MintPopup } from '@/components/ui/MintPopup'
+
 
 interface PropertyDetails {
   address: string;
@@ -58,11 +60,23 @@ export const CoordinatePropertyLookup: React.FC = () => {
     radius: '100'
   });
   
+  const [showMintPopup, setShowMintPopup] = useState(false);
+  const [mintedTokenId, setMintedTokenId] = useState<number | null>(null);
+
   const [propertyData, setPropertyData] = useState<PropertyDetails | null>(null);
   const [valuation, setValuation] = useState<PropertyValuation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'input' | 'property' | 'valuation'>('input');
+
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const [consentSigned , setConsentSigned] = useState(false);
+  const [minting , setMinting] = useState(false);
+  const [mintSuccess , setMintSuccess] = useState(false);
+  const [mintError , setMintError] = useState<string | null>(null);
+  const [vaultSuccessMessage, setVaultSuccessMessage] = useState<string | null>(null);
+
 
   const handleLookup = async () => {
     if (!coordinates.lat || !coordinates.lon) {
@@ -142,15 +156,7 @@ export const CoordinatePropertyLookup: React.FC = () => {
       default: return 'text-gray-600';
     }
   };
-  
-  const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const [consentSigned , setConsentSigned] = useState(false);
-  const [minting , setMinting] = useState(false);
-  const [mintSuccess , setMintSuccess] = useState(false);
-  const [mintError , setMintError] = useState<string | null>(null);
 
-  // Function to handle user consent and minting the NFT
   const handleConsentAndMint = async () =>{
     if(!address || !valuation || !propertyData) return;
     setMintError(null);
@@ -163,10 +169,16 @@ export const CoordinatePropertyLookup: React.FC = () => {
       if(!signature) throw new Error('Consent Signature Failed');
       setConsentSigned(true);
       const ipfsHash =  'Qma6e8dovN9UiaQ3PiDWWU5zEVr7h4h8E3xFtL3mkoD5aK'; // Placeholder IPFS hash
-      await mintPropertyNFT(address , ipfsHash , valuation.estimatedValue);
+      const result = await mintPropertyNFT(address, ipfsHash, valuation.estimatedValue);
+      const transferEvent = result.logs?.find((log: any) => log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef');
+      const tokenId = transferEvent?.topics[3] ? parseInt(transferEvent.topics[3], 16) : null;
+      setMintedTokenId(tokenId);
       setMintSuccess(true);
-    }
-    catch(err : any)
+      if (tokenId !== null){
+        await setPropertyVerified(tokenId , true);//we assume that this will always work;
+      }
+
+    } catch(err : any)
     {
        console.log(err.message);
        setMintError(err.message || 'Minting Failed');
@@ -176,6 +188,19 @@ export const CoordinatePropertyLookup: React.FC = () => {
     }
   };
 
+  // Handlers for the MintPopup (Open Vault) component
+  const handleVaultSuccess = (tokenId: number) => {
+    setShowMintPopup(false);
+    setVaultSuccessMessage(`Successfully opened vault for Token ID #${tokenId}!`);
+    setTimeout(() => setVaultSuccessMessage(null), 5000); // Clear message after 5 seconds
+  };
+
+  const handleVaultError = (error: string) => {
+    setShowMintPopup(false);
+    setMintError(error); // Reuse the existing error state to display the message
+    setTimeout(() => setMintError(null), 5000);
+  };
+  
   if (step === 'input') {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -541,7 +566,23 @@ export const CoordinatePropertyLookup: React.FC = () => {
           </button>
           {mintSuccess && (
             <div className="mt-4 w-full max-w-md bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800 text-center">Successfully Minted!</p>
+              <p className="text-green-800 text-center">
+                Property NFT Successfully Minted!
+                {mintedTokenId && <span className="block text-sm mt-1">Token ID: #{mintedTokenId}</span>}
+              </p>
+              <div className="flex justify-center mt-3">
+                <button
+                    onClick={() => setShowMintPopup(true)}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                >
+                    🏠 Open Vault & Mint HOMED Tokens
+                </button>
+              </div>
+            </div>
+          )}
+          {vaultSuccessMessage && (
+             <div className="mt-4 w-full max-w-md bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <p className="text-purple-800 text-center">{vaultSuccessMessage}</p>
             </div>
           )}
           {mintError && (
@@ -550,6 +591,18 @@ export const CoordinatePropertyLookup: React.FC = () => {
             </div>
           )}
         </div>
+        
+        {/* Add MintPopup component at the end, before closing div */}
+        {showMintPopup && propertyData && valuation && (
+          <MintPopup
+            isOpen={showMintPopup}
+            onClose={() => setShowMintPopup(false)}
+            propertyData={propertyData}
+            valuation={valuation}
+            onMintSuccess={handleVaultSuccess}
+            onMintError={handleVaultError}
+          />
+        )}
       </div>
     );
   }
