@@ -129,8 +129,14 @@ export async function mintPropertyNFT(to: string, ipfsHash: string, valuation: n
 }
 
 // Function 2: Set the verification status of a property.
-export async function setPropertyVerified(tokenId:number , status:boolean , signer?:any) {
-    const contract = await getContractInstance('propertyNft' , signer);
+export async function setPropertyVerified(tokenId:number , status:boolean) {
+    // ALWAYS use admin signer for verification - this is a privileged action
+    const adminSigner = getAdminSigner();
+    const contract = await getContractInstance('propertyNft', adminSigner);
+    
+    console.log('🔧 DEBUG setPropertyVerified - Using admin signer');
+    console.log('🔧 DEBUG setPropertyVerified - Admin address:', await adminSigner.getAddress());
+    
     const tx = await contract.setVerified(tokenId , status); // Note: Original function was setVerfied, might be a typo for setVerified
     return tx.wait();
 }
@@ -172,6 +178,7 @@ export async function getCountofProperty(address:string) {
    const count= tx.toString();
    return count;
 }
+
 
 export async function getnextTokenid(){
   const contracts = await getContractInstance('homedToken');

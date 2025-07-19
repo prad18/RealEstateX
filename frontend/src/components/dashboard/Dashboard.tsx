@@ -6,6 +6,7 @@ import { PropertyRegistration } from '@/components/property/PropertyRegistration
 import { VerificationStatus } from '@/components/verification/VerificationStatus';
 import { CoordinatePropertyLookup } from '@/components/property/CoordinatePropertyLookup';
 import { FaucetLink } from '@/components/wallet/FaucetLink';
+import { MintPopup } from '@/components/ui/MintPopup';
 import { type VerificationResult } from '@/services/verificationService';
 import { balanceof , getCountofProperty } from '@/services/contracts'
 
@@ -23,6 +24,9 @@ export const Dashboard: React.FC = () => {
   //The state added by Jithesh for HomedBalance checking;
   const[balance , setBalance] = useState<string>("0");
   const[PropertyCount , setPropertyCount] = useState<string>("0"); //This state I added to check the number of Property NFT that the User Holds;
+  
+  // State for MintPopup
+  const [showMintPopup, setShowMintPopup] = useState(false);
 
   // Fetch data when wallet connects
   useEffect(() => {
@@ -184,7 +188,10 @@ export const Dashboard: React.FC = () => {
                 <div className="text-lg font-medium text-gray-900">🏠 Register Property</div>
                 <div className="text-sm text-gray-600 mt-1">Upload documents and register new property</div>
               </button>
-              <button className="p-4 text-left border rounded-lg hover:bg-gray-50">
+              <button 
+                onClick={() => setShowMintPopup(true)}
+                className="p-4 text-left border rounded-lg hover:bg-gray-50 hover:border-green-300 transition-colors"
+              >
                 <div className="text-lg font-medium text-gray-900">💰 Mint $HOMED</div>
                 <div className="text-sm text-gray-600 mt-1">Generate stablecoins from your property</div>
               </button>
@@ -233,20 +240,7 @@ export const Dashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Network Info */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Network Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-gray-600">Network</div>
-                <div className="text-lg font-medium">BlockDAG Testnet</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">Chain ID</div>
-                <div className="text-lg font-medium">1043</div>
-              </div>
-            </div>
-          </div>
+          
         </>
       )}
 
@@ -289,6 +283,20 @@ export const Dashboard: React.FC = () => {
           />
         </div>
       )}
+
+      {/* MintPopup Component */}
+      <MintPopup
+        isOpen={showMintPopup}
+        onClose={() => setShowMintPopup(false)}
+        onMintSuccess={(tokenId) => {
+          console.log('Minting successful for token:', tokenId);
+          fetchDashboardData(); // Refresh balances
+        }}
+        onMintError={(error) => {
+          console.error('Minting failed:', error);
+          // Could add toast notification here
+        }}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { openvault, getTokenIds , giveApproval , setPropertyVerified } from '@/services/contracts';
+import { PropertyNFTMinting } from '@/components/property/PropertyNFTMinting';
 
 interface PropertyDetails {
   address: string;
@@ -30,8 +31,8 @@ interface PropertyValuation {
 interface MintPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  propertyData: PropertyDetails;
-  valuation: PropertyValuation;
+  propertyData?: PropertyDetails;
+  valuation?: PropertyValuation;
   onMintSuccess: (tokenId: number) => void;
   onMintError: (error: string) => void;
 }
@@ -55,6 +56,8 @@ export const MintPopup: React.FC<MintPopupProps> = ({
   const [selectedTokenId, setSelectedTokenId] = useState<number | null>(null);
   const [loadingTokens, setLoadingTokens] = useState(false);
 
+
+  
   useEffect(() => {
     if (isOpen && isConnected && address) {
       const fetchTokenIds = async () => {
@@ -99,8 +102,8 @@ export const MintPopup: React.FC<MintPopupProps> = ({
       const consentMessage = `I, ${address}, consent to open a vault for the property NFT with Token ID #${selectedTokenId}.
 
 Property Details:
-- Address: ${propertyData.address}, ${propertyData.city}, ${propertyData.state}
-- Valuation: $${valuation.estimatedValue.toLocaleString()}
+${propertyData ? `- Address: ${propertyData.address}, ${propertyData.city}, ${propertyData.state}` : '- Property: NFT Token #' + selectedTokenId}
+${valuation ? `- Valuation: $${valuation.estimatedValue.toLocaleString()}` : '- Action: Opening vault for token minting'}
 
 I understand this will interact with the vault manager contract and may require gas fees.`;
 
@@ -125,10 +128,20 @@ I understand this will interact with the vault manager contract and may require 
     setMinting(true);
     
     try {
-      console.log('Getting into the miniting Process');
+      console.log('Getting into the minting Process');
+            
+      // Step 1: Set property as verified (ADMIN ACTION - must be first)
+      console.log('Step 1: Setting NFT as verified with admin...');
+      await setPropertyVerified(selectedTokenId, true);
+      
+      // Step 2: Give approval (USER ACTION)
+      console.log('Step 2: Giving approval with user...');
       await giveApproval(selectedTokenId);
-      await setPropertyVerified(selectedTokenId , true);
+      
+      // Step 3: Open vault (USER ACTION)
+      console.log('Step 3: Opening vault with user...');
       await openvault(selectedTokenId);
+      
       onMintSuccess(selectedTokenId);
       handleClose();
       
@@ -170,6 +183,28 @@ I understand this will interact with the vault manager contract and may require 
           {step === 'selectToken' && (
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">Select a Property NFT to Use</h3>
+              {/* Temporary Mint Property NFT Button */}
+              <div className="mb-6">
+                <PropertyNFTMinting
+                  showMockOption={true}
+                  onMintSuccess={async (tokenId) => {
+                    // tokenId is the ID of the newly minted NFT!
+                    if (address) {
+                      const ids = await getTokenIds(address);
+                      setUserTokenIds(ids);
+                      // Optionally, auto-select the new token:
+                      setSelectedTokenId(tokenId);
+                      setStep('consent');
+                    }
+                  }}
+                  onMintError={onMintError}
+                  buttonText="🏠 Mint Property NFT (Mock Data)"
+                  buttonClassName="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+                />
+              </div>
+              {/* End Temporary Button */}
+              
+              
               {loadingTokens ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -214,9 +249,19 @@ I understand this will interact with the vault manager contract and may require 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-800 mb-2">Property Summary</h4>
                 <div className="text-blue-700 text-sm space-y-1">
-                  <p><strong>Address:</strong> {propertyData.address}</p>
-                  <p><strong>City:</strong> {propertyData.city}, {propertyData.state}</p>
-                  <p><strong>Estimated Value:</strong> ${valuation.estimatedValue.toLocaleString()}</p>
+                  {propertyData ? (
+                    <>
+                      <p><strong>Address:</strong> {propertyData.address}</p>
+                      <p><strong>City:</strong> {propertyData.city}, {propertyData.state}</p>
+                    </>
+                  ) : (
+                    <p><strong>Property:</strong> NFT Token #{selectedTokenId}</p>
+                  )}
+                  {valuation ? (
+                    <p><strong>Estimated Value:</strong> ${valuation.estimatedValue.toLocaleString()}</p>
+                  ) : (
+                    <p><strong>Action:</strong> Opening vault for existing NFT</p>
+                  )}
                   <p><strong>Selected Token ID:</strong> #{selectedTokenId}</p>
                 </div>
               </div>

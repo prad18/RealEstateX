@@ -2,7 +2,8 @@ import React from 'react'
 import { useAccount, useChainId } from 'wagmi'
 
 const NETWORK_NAMES: { [key: number]: string } = {
-  1043: 'BlockDAG Testnet'
+  1043: 'BlockDAG Testnet',
+  11155111: 'Ethereum Sepolia'
 }
 
 const NETWORK_COLORS: { [key: number]: string } = {

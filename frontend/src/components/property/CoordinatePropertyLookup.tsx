@@ -76,8 +76,7 @@ export const CoordinatePropertyLookup: React.FC = () => {
   const [mintSuccess , setMintSuccess] = useState(false);
   const [mintError , setMintError] = useState<string | null>(null);
   const [vaultSuccessMessage, setVaultSuccessMessage] = useState<string | null>(null);
-
-
+  
   const handleLookup = async () => {
     if (!coordinates.lat || !coordinates.lon) {
       setError('Please enter both latitude and longitude');
@@ -555,6 +554,7 @@ export const CoordinatePropertyLookup: React.FC = () => {
             Last updated: {new Date(valuation.lastUpdated).toLocaleString()}
           </div>
         </div>
+
         {/* Consent and Mint Button */}
         <div className='mt-8 flex flex-col items-center'>
           <button
