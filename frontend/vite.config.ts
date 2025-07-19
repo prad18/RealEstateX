@@ -15,9 +15,10 @@ export default defineConfig({
       // This will proxy any request from your app starting with /api
       // to the Infura Sepolia endpoint.
       '/api': {
-        target: 'https://sepolia.infura.io',
+        target: 'https://test-rpc.primordial.bdagscan.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: true,
       },
     },
   },

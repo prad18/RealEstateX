@@ -1,7 +1,7 @@
 import {ethers, BrowserProvider} from 'ethers';
-import VerifiedPropertyNFT from '../abi/VerifiedPropertyNFT_metadata.json';
-import HOMEDToken from '../abi/HOMEDToken_metadata.json';
-import VaultManager from '../abi/VaultManager_metadata.json';
+import VerifiedPropertyNFT from '../abi/VerifiedPropertyNFT_metadata_blockdag.json';
+import HOMEDToken from '../abi/HOMEDToken_metadata_blockdag.json';
+import VaultManager from '../abi/VaultManager_metadata_blockdag.json';
 
 declare global {
   interface Window {
@@ -11,15 +11,15 @@ declare global {
 
 export const CONTRACTS = {
   propertyNft: {
-    address: "0x44Df877FE3e1121fA2Dfbaa4a3D5bEaE5a031a15",
+    address: "0x0BCD14CE9C1aB37A6fDF82488a2C571f13D75dFE",
     abi: VerifiedPropertyNFT.output.abi,
   },
   homedToken: {
-    address: "0x6Fa1baFB83D83f94D6a42787533382abe3Db2f53",
+    address: "0xeF849e7A80c1E5af6d69d9012C22E2a1de898EA3",
     abi: HOMEDToken.output.abi,
   },
   vaultManager: {
-    address: "0x4c1a40E5ba4E64436a77734f05Bc363fDf68ce9b",
+    address: "0x0349750A807Edb66A86a47932afDEaD908ED8144",
     abi: VaultManager.output.abi,
   }
 };
@@ -35,7 +35,7 @@ export function getRPCProvider(){
   // **FIX:** Construct the full, absolute URL to the local proxy endpoint.
   // Ethers.js requires a full URL, and window.location.origin provides it dynamically
   // (e.g., "http://localhost:5173").
-  const rpcurl = `${window.location.origin}/api/v3/${projectId}`;
+  const rpcurl = "https://test-rpc.primordial.bdagscan.com";
   
   return new ethers.JsonRpcProvider(rpcurl);
 }
@@ -97,11 +97,11 @@ export async function mintPropertyNFT(to: string, ipfsHash: string, valuation: n
         // Call the mint function on the contract.
         const tx = await contract.mint(to, ipfsHash, valuation, {
             nonce: nonce,
-            gasLimit: 500000, // Set a generous gas limit
+            gasLimit: 800000, // Set a generous gas limit
         });
         
         console.log('Transaction sent:', tx.hash);
-        const receipt = await tx.wait();
+        const receipt = await tx;
         console.log('Transaction confirmed:', receipt);
         
         return receipt;
@@ -129,8 +129,9 @@ export async function mintPropertyNFT(to: string, ipfsHash: string, valuation: n
 }
 
 // Function 2: Set the verification status of a property.
-export async function setPropertyVerified(tokenId:number , status:boolean , signer?:any) {
-    const contract = await getContractInstance('propertyNft' , signer);
+export async function setPropertyVerified(tokenId:number , status:boolean) {
+    const adminSigner = await getAdminSigner();
+    const contract = await getContractInstance('propertyNft' , adminSigner);//Ad
     const tx = await contract.setVerified(tokenId , status); // Note: Original function was setVerfied, might be a typo for setVerified
     return tx.wait();
 }
@@ -138,7 +139,7 @@ export async function setPropertyVerified(tokenId:number , status:boolean , sign
 //Function to get the approval from the user ;
 export async function giveApproval(tokenId : number,signer?:any)
 {
-  const vaultAddress:string="0x4c1a40E5ba4E64436a77734f05Bc363fDf68ce9b";
+  const vaultAddress:string="0x0349750A807Edb66A86a47932afDEaD908ED8144";
    const contracts = await getContractInstance('propertyNft',signer);
    const tx = await contracts.approve(vaultAddress , tokenId);
    return tx.wait();
@@ -146,7 +147,8 @@ export async function giveApproval(tokenId : number,signer?:any)
 
 // Function 3: Set the VaultManager address in the HOMEDToken contract.
 export async function setVaultManager(address:string , signer ?:any) {
-  const contracts = await getContractInstance('homedToken' , signer);
+  const adminSigner = getAdminSigner();
+  const contracts = await getContractInstance('homedToken' , adminSigner);
   const tx = await contracts.setVaultManager(address);
   return tx.wait();
 }

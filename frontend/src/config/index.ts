@@ -33,7 +33,7 @@ export const config = {
   healthFactorDanger: 1.2,
   
   // Supported chains
-  supportedChains: ['mainnet', 'sepolia'],
+  supportedChains: ['mainnet', 'sepolia','blockdag'],
 } as const;
 
 export type AppConfig = typeof config;

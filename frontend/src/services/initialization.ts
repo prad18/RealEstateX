@@ -11,7 +11,7 @@ export async function initializeContracts() {
   try {
     console.log('Initializing VaultManager...');
     const adminSigner = getAdminSigner();
-    const vaultManagerAddress = "0x4c1a40E5ba4E64436a77734f05Bc363fDf68ce9b";
+    const vaultManagerAddress = "0x0349750A807Edb66A86a47932afDEaD908ED8144";
     
     await setVaultManager(vaultManagerAddress, adminSigner);
     isVaultManagerSet = true;
