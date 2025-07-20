@@ -1,0 +1,8 @@
+fastapi
+pytesseract
+Pillow
+requests
+spacy
+python-dotenv
+fuzzywuzzy
+uvicorn

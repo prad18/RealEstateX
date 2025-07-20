@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { mintPropertyNFT, getnextTokenid } from '@/services/contracts';
+import { mintPropertyNFT } from '@/services/contracts';
 
-interface PropertyData {
+interface PropertyDetails {
   address: string;
   city: string;
   state: string;
@@ -12,10 +12,27 @@ interface PropertyData {
     lat: number;
     lon: number;
   };
+  owner: string;
   value: {
     land: number;
     improvement: number;
     total: number;
+  };
+  zoning: {
+    code: string;
+    description: string;
+    type: string;
+    subtype: string;
+  };
+  legal: {
+    parcelNumber: string;
+    stateParcelNumber: string;
+    legalDescription: string;
+  };
+  demographics: {
+    medianIncome: number;
+    affordabilityIndex: number;
+    populationDensity: number;
   };
 }
 
@@ -28,87 +45,60 @@ interface PropertyValuation {
 }
 
 interface PropertyNFTMintingProps {
-  propertyData?: PropertyData;
+  propertyDetails?: PropertyDetails;
   valuation?: PropertyValuation;
-  onMintSuccess: (tokenId: number) => void;
-  onMintError: (error: string) => void;
-  buttonText?: string;
-  buttonClassName?: string;
-  showMockOption?: boolean;
+  assetIpfsHash?: string; // ADDED: hash for property deed
 }
 
 export const PropertyNFTMinting: React.FC<PropertyNFTMintingProps> = ({
-  propertyData,
+  propertyDetails,
   valuation,
-  onMintSuccess,
-  onMintError,
-  buttonText = "Sign Consent & Mint Property NFT",
-  buttonClassName = "w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors",
-  showMockOption = false
+  assetIpfsHash,
 }) => {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  
-  // Keep original states from CoordinatePropertyLookup
+
   const [minting, setMinting] = useState(false);
   const [consentSigned, setConsentSigned] = useState(false);
   const [mintSuccess, setMintSuccess] = useState(false);
   const [mintedTokenId, setMintedTokenId] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
-  // ORIGINAL CORE LOGIC - Keep exactly the same as CoordinatePropertyLookup
-    const handleConsentAndMint = async () => {
-        if (!address || !valuation || !propertyData) return;
-        onMintError('');
-        setMinting(true);
-        setMintSuccess(false);
+  const buttonText = "Sign Consent & Mint Property NFT";
+  const buttonClassName = "w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors";
 
-        try {
-            const consentMessage = `I , ${address} , consent to mint an NFT for the property at ${propertyData.address} with a valuation of ${valuation.estimatedValue}`;
-            const signature = await signMessageAsync({ message: consentMessage });
-            if (!signature) throw new Error('Consent Signature Failed');
-            setConsentSigned(true);
-            const ipfsHash = 'Qma6e8dovN9UiaQ3PiDWWU5zEVr7h4h8E3xFtL3mkoD5aK';
-            const result = await mintPropertyNFT(address, ipfsHash, valuation.estimatedValue);
-            const transferEvent = result.logs?.find((log: any) => log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef');
-            const tokenId = transferEvent?.topics[3] ? parseInt(transferEvent.topics[3], 16) : null;
-            setMintedTokenId(tokenId);
-            setMintSuccess(true);
-                  // if (tokenId !== null){
-                  //   await setPropertyVerified(tokenId , true);//we assume that this will always work;
-                  // }
-        } catch (err: any) {
-            onMintError(err.message || 'Minting Failed');
-        } finally {
-            setMinting(false);
-        }
-    };
-
-    const handleMockMint = async () => {
-    if (!address) return;
-    onMintError('');
+  const handleConsentAndMint = async () => {
+    setError('');
+    if (!address || !valuation || !propertyDetails) {
+      setError("Missing wallet connection or property/valuation data.");
+      return;
+    }
+    if (!assetIpfsHash) {
+      setError("Missing property deed/document (IPFS hash). Please upload documents and complete verification.");
+      return;
+    }
     setMinting(true);
     setMintSuccess(false);
-
     try {
-        const consentMessage = `I, ${address}, consent to mint a test Property NFT with mock data for testing purposes.`;
-        const signature = await signMessageAsync({ message: consentMessage });
-        if (!signature) throw new Error('Consent Signature Failed');
-        setConsentSigned(true);
-        const ipfsHash = 'QmTempMockHash123456789';
-        const result = await mintPropertyNFT(address, ipfsHash, 500000);
+      const consentMessage = `I, ${address}, consent to mint an NFT for the property at ${propertyDetails.address} with a valuation of ${valuation.estimatedValue}`;
+      const signature = await signMessageAsync({ message: consentMessage });
+      if (!signature) throw new Error('Consent Signature Failed');
+      setConsentSigned(true);
 
-        if (result) {
-        const tokenId = await getnextTokenid();
-        setMintedTokenId(tokenId - 1);
-        setMintSuccess(true);
-        onMintSuccess(tokenId - 1);
-        }
+      // Now mint NFT using the actual IPFS hash!
+      const result = await mintPropertyNFT(address, assetIpfsHash, valuation.estimatedValue);
+      const transferEvent = result.logs?.find((log: any) =>
+        log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+      );
+      const tokenId = transferEvent?.topics[3] ? parseInt(transferEvent.topics[3], 16) : 1;
+      setMintedTokenId(tokenId);
+      setMintSuccess(true);
     } catch (err: any) {
-        onMintError(err.message || 'Minting Failed');
+      setError(err.message || 'Minting Failed');
     } finally {
-        setMinting(false);
+      setMinting(false);
     }
-    };
+  };
 
   if (!address) {
     return (
@@ -120,60 +110,57 @@ export const PropertyNFTMinting: React.FC<PropertyNFTMintingProps> = ({
     );
   }
 
+  if (!propertyDetails || !valuation) {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-yellow-800 text-center">
+          Missing property or valuation data. Please complete verification first.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* Property Summary (if provided) */}
-      {propertyData && valuation && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">Property Summary</h4>
-          <div className="text-blue-800 text-sm space-y-1">
-            <p><strong>Address:</strong> {propertyData.address}, {propertyData.city}, {propertyData.state}</p>
-            <p><strong>Area:</strong> {propertyData.area.toLocaleString()} sq ft</p>
-            <p><strong>Type:</strong> {propertyData.propertyType}</p>
-            <p><strong>Estimated Value:</strong> ${valuation.estimatedValue.toLocaleString()}</p>
-            <p><strong>Confidence:</strong> {valuation.confidenceScore}%</p>
-          </div>
+      {/* Property Summary */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-blue-900 mb-2">Property Summary</h4>
+        <div className="text-blue-800 text-sm space-y-1">
+          <p><strong>Address:</strong> {propertyDetails.address}, {propertyDetails.city}, {propertyDetails.state}</p>
+          <p><strong>Area:</strong> {propertyDetails.area.toLocaleString()} sq ft</p>
+          <p><strong>Type:</strong> {propertyDetails.propertyType}</p>
+          <p><strong>Estimated Value:</strong> ${valuation.estimatedValue.toLocaleString()}</p>
+          <p><strong>Confidence:</strong> {valuation.confidenceScore}%</p>
+          {assetIpfsHash && (
+            <p className="break-all"><strong>IPFS:</strong> <a href={`https://gateway.pinata.cloud/ipfs/${assetIpfsHash}`} target="_blank" rel="noopener noreferrer">{assetIpfsHash}</a></p>
+          )}
+        </div>
+      </div>
+
+      {/* Minting Button */}
+      <div className="space-y-3">
+        <button
+          onClick={handleConsentAndMint}
+          disabled={minting}
+          className={buttonClassName}
+        >
+          {minting ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+              Minting NFT...
+            </div>
+          ) : (
+            buttonText
+          )}
+        </button>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800 text-center">{error}</p>
         </div>
       )}
-
-      {/* Minting Buttons */}
-      <div className="space-y-3">
-        {/* Real Property Mint Button - Uses ORIGINAL LOGIC */}
-        {propertyData && valuation && (
-          <button
-            onClick={handleConsentAndMint}
-            disabled={minting}
-            className={buttonClassName}
-          >
-            {minting ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Minting NFT...
-              </div>
-            ) : (
-              buttonText
-            )}
-          </button>
-        )}
-
-        {/* Mock Data Mint Button */}
-        {showMockOption && (
-          <button
-            onClick={handleMockMint}
-            disabled={minting}
-            className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors border-2 border-green-300"
-          >
-            {minting ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Minting Test NFT...
-              </div>
-            ) : (
-              '🧪 Mint Test NFT (Mock Data)'
-            )}
-          </button>
-        )}
-      </div>
 
       {/* Success Message */}
       {mintSuccess && (

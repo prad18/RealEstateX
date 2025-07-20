@@ -278,13 +278,13 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Registration Flow */}
-      {currentFlow === 'register' && uploadedDocuments.length > 0 && (
-        <PropertyRegistration
-          uploadedDocuments={uploadedDocuments}
-          onRegistrationComplete={handleRegistrationComplete}
-        />
-      )}
+     {/* {currentFlow === 'register' && uploadedDocuments.length === 2 && propertyDetails && (
+  <PropertyRegistration
+    uploadedDocuments={uploadedDocuments}
+    propertyDetails={propertyDetails}
+    onRegistrationComplete={handleRegistrationComplete}
+  />
+)} */}
 
       {/* Verification Flow */}
       {currentFlow === 'verify' && currentPropertyId && (
