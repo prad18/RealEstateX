@@ -35,6 +35,7 @@ interface MintPopupProps {
   valuation?: PropertyValuation;
   onMintSuccess: (tokenId: number) => void;
   onMintError: (error: string) => void;
+  preSelectedTokenId?: number | null;
 }
 
 export const MintPopup: React.FC<MintPopupProps> = ({
@@ -43,23 +44,24 @@ export const MintPopup: React.FC<MintPopupProps> = ({
   propertyData,
   valuation,
   onMintSuccess,
-  onMintError
+  onMintError,
+  preSelectedTokenId = null,
 }) => {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  
-  const [step, setStep] = useState<'selectToken' | 'consent' | 'signing' | 'minting'>('selectToken');
+
+  const [step, setStep] = useState<'selectToken' | 'consent' | 'signing' | 'minting'>(
+    preSelectedTokenId ? 'consent' : 'selectToken'
+  );
   const [consentChecked, setConsentChecked] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [userTokenIds, setUserTokenIds] = useState<number[]>([]);
-  const [selectedTokenId, setSelectedTokenId] = useState<number | null>(null);
+  const [selectedTokenId, setSelectedTokenId] = useState<number | null>(preSelectedTokenId);
   const [loadingTokens, setLoadingTokens] = useState(false);
 
-
-  
   useEffect(() => {
-    if (isOpen && isConnected && address) {
+    if (isOpen && isConnected && address && step === 'selectToken') {
       const fetchTokenIds = async () => {
         setLoadingTokens(true);
         try {
@@ -74,7 +76,7 @@ export const MintPopup: React.FC<MintPopupProps> = ({
       };
       fetchTokenIds();
     }
-  }, [isOpen, isConnected, address, onMintError]);
+  }, [isOpen, isConnected, address, onMintError, step]);
 
   const handleClose = () => {
     setStep('selectToken');
@@ -96,9 +98,8 @@ export const MintPopup: React.FC<MintPopupProps> = ({
     if (!consentChecked || !selectedTokenId) return;
     console.log("Sucessfully Passed the base case");
     setStep('signing');
-    
+
     try {
-    
       const consentMessage = `I, ${address}, consent to open a vault for the property NFT with Token ID #${selectedTokenId}.
 
 Property Details:
@@ -112,7 +113,6 @@ I understand this will interact with the vault manager contract and may require 
       setStep('minting');
       console.log("Trying to mint the coins");
       await handleMint();
-      
     } catch (error: any) {
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
         onMintError('Signature was rejected by user');
@@ -126,25 +126,24 @@ I understand this will interact with the vault manager contract and may require 
   const handleMint = async () => {
     if (!selectedTokenId) return;
     setMinting(true);
-    
+
     try {
       console.log('Getting into the minting Process');
             
       // Step 1: Set property as verified (ADMIN ACTION - must be first)
       console.log('Step 1: Setting NFT as verified with admin...');
       await setPropertyVerified(selectedTokenId, true);
-      
+
       // Step 2: Give approval (USER ACTION)
       console.log('Step 2: Giving approval with user...');
       await giveApproval(selectedTokenId);
-      
+
       // Step 3: Open vault (USER ACTION)
       console.log('Step 3: Opening vault with user...');
       await openvault(selectedTokenId);
-      
+
       onMintSuccess(selectedTokenId);
       handleClose();
-      
     } catch (error: any) {
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
         onMintError('Transaction was rejected by user');
@@ -203,8 +202,8 @@ I understand this will interact with the vault manager contract and may require 
                 />
               </div>
               {/* End Temporary Button */}
-              
-              
+
+
               {loadingTokens ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -213,7 +212,7 @@ I understand this will interact with the vault manager contract and may require 
               ) : userTokenIds.length > 0 ? (
                 <div className="grid grid-cols-3 gap-4">
                   {userTokenIds.map(id => (
-                    <button 
+                    <button
                       key={id}
                       onClick={() => handleTokenSelect(id)}
                       className="p-4 border rounded-lg text-center hover:bg-blue-100 hover:border-blue-500 transition-colors"
@@ -275,7 +274,7 @@ I understand this will interact with the vault manager contract and may require 
                   className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="consent" className="text-sm text-gray-700">
-                  I consent to open a vault for this property. 
+                  I consent to open a vault for this property.
                   I understand this will interact with the blockchain and requires gas fees.
                 </label>
               </div>
