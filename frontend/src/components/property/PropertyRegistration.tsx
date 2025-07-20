@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { regridService } from '@/services/regridService';
 import { verificationService } from '@/services/verificationService';
+// Make sure you have this component!
+import { DocumentUpload } from '@/components/upload/DocumentUpload';
 
 interface CoordinateInput {
   lat: string;
@@ -37,7 +39,11 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
-  // Form state
+  // ---- Additional for upload flow
+  const [localUploadedDocs, setLocalUploadedDocs] = useState(uploadedDocuments || []);
+  const [currentFlow, setCurrentFlow] = useState<'upload' | 'coordinates' | 'property' | 'consent'>('upload');
+  // ---------------------------------
+
   const [coordinates, setCoordinates] = useState<CoordinateInput>({
     lat: '',
     lon: '',
@@ -45,10 +51,14 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
   });
 
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
-  const [currentStep, setCurrentStep] = useState<'coordinates' | 'property' | 'consent'>('coordinates');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [consentSigned, setConsentSigned] = useState(false);
+
+  const handleUploadComplete = (docs: Array<{ file: File; ipfs_hash: string }>) => {
+    setLocalUploadedDocs(docs);
+    setCurrentFlow('coordinates');
+  };
 
   const handleLookupProperty = async () => {
     if (!coordinates.lat || !coordinates.lon) {
@@ -65,7 +75,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
       const radius = parseInt(coordinates.radius);
 
       const result = await regridService.getPropertyByCoordinates(lat, lon, radius);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch property data');
       }
@@ -81,8 +91,8 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
         owner: property.owner,
         value: { total: property.value.total }
       });
-      
-      setCurrentStep('property');
+
+      setCurrentFlow('property');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -98,14 +108,14 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
 
     try {
       const consentMessage = `I confirm that I am the legal owner of the property at ${propertyData.address} and consent to tokenize this property on the blockchain. Wallet: ${address}`;
-      
+
       const signature = await signMessageAsync({
         message: consentMessage
       });
 
       if (signature) {
         setConsentSigned(true);
-        setCurrentStep('consent');
+        setCurrentFlow('consent');
       }
     } catch (err) {
       setError('Failed to sign consent message');
@@ -123,10 +133,10 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
     try {
       // Generate property ID based on coordinates and owner
       const propertyId = `prop_${propertyData.coordinates.lat}_${propertyData.coordinates.lon}_${address.slice(2, 8)}`;
-      
+
       // Get document hashes for verification
-      const documentHashes = uploadedDocuments.map(doc => doc.ipfs_hash);
-      
+      const documentHashes = localUploadedDocs.map(doc => doc.ipfs_hash);
+
       // Submit for verification using the real property data
       await verificationService.submitForVerification(
         propertyId,
@@ -146,7 +156,19 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
     }
   };
 
-  if (currentStep === 'coordinates') {
+  if (currentFlow === 'upload') {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h2 className="text-xl font-semibold mb-4">Upload Property Documents</h2>
+        <p className="text-gray-600 mb-6">
+          Please upload all required documents for your property. These will be stored securely on IPFS.
+        </p>
+        <DocumentUpload onUploadComplete={handleUploadComplete} />
+      </div>
+    );
+  }
+
+  if (currentFlow === 'coordinates') {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Property Coordinates</h2>
@@ -169,7 +191,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Longitude *
@@ -225,7 +247,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
     );
   }
 
-  if (currentStep === 'property' && propertyData) {
+  if (currentFlow === 'property' && propertyData) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Verify Property Information</h2>
@@ -262,7 +284,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
 
         <div className="flex gap-4">
           <button
-            onClick={() => setCurrentStep('coordinates')}
+            onClick={() => setCurrentFlow('coordinates')}
             className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
           >
             Back to Coordinates
@@ -279,7 +301,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
     );
   }
 
-  if (currentStep === 'consent' && propertyData && consentSigned) {
+  if (currentFlow === 'consent' && propertyData && consentSigned) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Submit Property Registration</h2>
@@ -298,7 +320,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
           <h3 className="font-semibold mb-3">Registration Summary</h3>
           <div className="space-y-2 text-sm">
             <div><strong>Property:</strong> {propertyData.address}</div>
-            <div><strong>Documents:</strong> {uploadedDocuments.length} files uploaded</div>
+            <div><strong>Documents:</strong> {localUploadedDocs.length} files uploaded</div>
             <div><strong>Verification:</strong> Will be submitted to hybrid verification system</div>
           </div>
         </div>
@@ -311,7 +333,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
 
         <div className="flex gap-4">
           <button
-            onClick={() => setCurrentStep('property')}
+            onClick={() => setCurrentFlow('property')}
             className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
           >
             Back to Property Details

@@ -179,14 +179,13 @@ export async function getCountofProperty(address:string) {
    return count;
 }
 
-
+//Function to get the token ids that a person owns;
 export async function getnextTokenid(){
   const contracts = await getContractInstance('homedToken');
   const tx = await contracts.nextTokenId();
   return parseInt(tx);
 } 
 
-//Function to get the token ids that a person owns;
 // Function to get the Property NFT token IDs that a person owns
 export async function getTokenIds(address: string): Promise<number[]> {
   try {
@@ -204,3 +203,46 @@ export async function getTokenIds(address: string): Promise<number[]> {
     throw new Error('Failed to fetch user property token IDs');
   }
 }
+
+//Fuction to Repay the loan and get the property back;
+export async function repay(
+  tokenID: number,
+  amount: bigint,
+  address: string,
+  signer?: any,
+) {
+  const balance = await balanceof(address); // balance is a bigint in ethers v6
+
+  if (amount > balance) {
+    throw new Error("Insufficient funds");
+  }
+
+  const contract = await getContractInstance("vaultManager", signer);
+  const tx = await contract.repayAndCloseVault(tokenID, amount);
+  return tx;
+}
+
+/**
+ * Returns a list of NFT token IDs currently mortgaged (active) by the user.
+ */
+export async function getActiveMortgagedProperties(userAddress: string, signer?: any) {
+  const contract = await getContractInstance('vaultManager', signer);
+
+  // 1. Get all NFT token IDs ever mortgaged by the user
+  const allVaults: bigint[] = await contract.getUserVaults(userAddress);
+
+  const activeTokenIds: bigint[] = [];
+
+  // 2. Check which ones are still active
+  for (const tokenId of allVaults) {
+    const vault = await contract.vaults(tokenId); // This returns the Vault struct
+    if (vault.active) {
+      activeTokenIds.push(tokenId);
+    }
+  }
+
+  return activeTokenIds; // Array of active NFT token IDs
+}
+
+
+   
