@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { regridService } from '@/services/regridService';
-import { useAccount , useSignMessage } from 'wagmi';
-import { mintPropertyNFT , setPropertyVerified } from '@/services/contracts';
-import { MintPopup } from '@/components/ui/MintPopup'
-
+import { PropertyRegistration } from '@/components/property/PropertyRegistration';
 
 interface PropertyDetails {
   address: string;
@@ -59,24 +56,17 @@ export const CoordinatePropertyLookup: React.FC = () => {
     lon: '',
     radius: '100'
   });
-  
-  const [showMintPopup, setShowMintPopup] = useState(false);
-  const [mintedTokenId, setMintedTokenId] = useState<number | null>(null);
 
   const [propertyData, setPropertyData] = useState<PropertyDetails | null>(null);
   const [valuation, setValuation] = useState<PropertyValuation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'input' | 'property' | 'valuation'>('input');
+  const [step, setStep] = useState<'input' | 'property' | 'valuation' | 'register'>('input');
 
-  const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const [consentSigned , setConsentSigned] = useState(false);
-  const [minting , setMinting] = useState(false);
-  const [mintSuccess , setMintSuccess] = useState(false);
-  const [mintError , setMintError] = useState<string | null>(null);
-  const [vaultSuccessMessage, setVaultSuccessMessage] = useState<string | null>(null);
-  
+  // Registration handoff
+  const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
+
   const handleLookup = async () => {
     if (!coordinates.lat || !coordinates.lon) {
       setError('Please enter both latitude and longitude');
@@ -93,7 +83,7 @@ export const CoordinatePropertyLookup: React.FC = () => {
 
       // Get property data
       const result = await regridService.getPropertyByCoordinates(lat, lon, radius);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch property data');
       }
@@ -138,6 +128,7 @@ export const CoordinatePropertyLookup: React.FC = () => {
     setError(null);
     setStep('input');
     setCoordinates({ lat: '', lon: '', radius: '100' });
+    setRegistrationSuccess(null);
   };
 
   const getMarketTrendColor = (trend: string) => {
@@ -156,50 +147,18 @@ export const CoordinatePropertyLookup: React.FC = () => {
     }
   };
 
-  const handleConsentAndMint = async () =>{
-    if(!address || !valuation || !propertyData) return;
-    setMintError(null);
-    setMinting(true);
-    setMintSuccess(false);
-    try{
-      const consetMessage = `I , ${address} , consent to mint an NFT for the property at ${propertyData.address} with a valuation of ${valuation.estimatedValue}`;
-      console.log(address); // debug statement
-      const signature = await signMessageAsync({message : consetMessage});
-      if(!signature) throw new Error('Consent Signature Failed');
-      setConsentSigned(true);
-      const ipfsHash =  'Qma6e8dovN9UiaQ3PiDWWU5zEVr7h4h8E3xFtL3mkoD5aK'; // Placeholder IPFS hash
-      const result = await mintPropertyNFT(address, ipfsHash, valuation.estimatedValue);
-      const transferEvent = result.logs?.find((log: any) => log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef');
-      const tokenId = transferEvent?.topics[3] ? parseInt(transferEvent.topics[3], 16) : null;
-      setMintedTokenId(tokenId);
-      setMintSuccess(true);
-      if (tokenId !== null){
-        await setPropertyVerified(tokenId , true);//we assume that this will always work;
-      }
-
-    } catch(err : any)
-    {
-       console.log(err.message);
-       setMintError(err.message || 'Minting Failed');
-    }
-    finally{
-      setMinting(false);
-    }
+  // Additions for registration step
+  const handleRegisterClick = () => {
+    setStep('register');
   };
 
-  // Handlers for the MintPopup (Open Vault) component
-  const handleVaultSuccess = (tokenId: number) => {
-    setShowMintPopup(false);
-    setVaultSuccessMessage(`Successfully opened vault for Token ID #${tokenId}!`);
-    setTimeout(() => setVaultSuccessMessage(null), 5000); // Clear message after 5 seconds
+  const handleRegistrationComplete = (propertyId: string) => {
+    setRegistrationSuccess(`✅ Property registered on-chain! Property ID: ${propertyId}`);
+    setStep('input');
   };
 
-  const handleVaultError = (error: string) => {
-    setShowMintPopup(false);
-    setMintError(error); // Reuse the existing error state to display the message
-    setTimeout(() => setMintError(null), 5000);
-  };
-  
+  // === UI Steps ===
+
   if (step === 'input') {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -280,6 +239,12 @@ export const CoordinatePropertyLookup: React.FC = () => {
               </div>
             )}
 
+            {registrationSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-green-800">{registrationSuccess}</p>
+              </div>
+            )}
+
             <button
               onClick={handleLookup}
               disabled={loading || !coordinates.lat || !coordinates.lon}
@@ -308,7 +273,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Basic Information */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
               <div className="space-y-3">
@@ -337,8 +301,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Property Values */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Assessed Values</h2>
               <div className="space-y-3">
@@ -362,8 +324,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Zoning Information */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Zoning & Legal</h2>
               <div className="space-y-3">
@@ -389,8 +349,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Demographics */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Area Demographics</h2>
               <div className="space-y-3">
@@ -422,7 +380,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
             </div>
           </div>
 
-          {/* Legal Description */}
           {propertyData.legal.legalDescription && (
             <div className="mt-6 bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Legal Description</h2>
@@ -467,7 +424,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Valuation Summary */}
             <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Valuation Summary</h2>
               <div className="space-y-4">
@@ -499,8 +455,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Property Summary */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Property Summary</h2>
               <div className="space-y-3">
@@ -528,7 +482,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
             </div>
           </div>
 
-          {/* Valuation Factors */}
           <div className="mt-8 bg-gray-50 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Valuation Factors</h2>
             <div className="space-y-4">
@@ -553,56 +506,37 @@ export const CoordinatePropertyLookup: React.FC = () => {
           <div className="mt-6 text-xs text-gray-500">
             Last updated: {new Date(valuation.lastUpdated).toLocaleString()}
           </div>
-        </div>
 
-        {/* Consent and Mint Button */}
-        <div className='mt-8 flex flex-col items-center'>
-          <button
-            onClick={handleConsentAndMint}
-            disabled={minting || !address}
-            className="w-full max-w-md bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {minting ? 'Minting NFT...' : 'Sign Consent & Mint Property NFT'}
-          </button>
-          {mintSuccess && (
-            <div className="mt-4 w-full max-w-md bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800 text-center">
-                Property NFT Successfully Minted!
-                {mintedTokenId && <span className="block text-sm mt-1">Token ID: #{mintedTokenId}</span>}
-              </p>
-              <div className="flex justify-center mt-3">
-                <button
-                    onClick={() => setShowMintPopup(true)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-                >
-                    🏠 Open Vault & Mint HOMED Tokens
-                </button>
-              </div>
-            </div>
-          )}
-          {vaultSuccessMessage && (
-             <div className="mt-4 w-full max-w-md bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <p className="text-purple-800 text-center">{vaultSuccessMessage}</p>
-            </div>
-          )}
-          {mintError && (
-            <div className="mt-4 w-full max-w-md bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className='text-red-800 text-center'>{mintError}</p>
-            </div>
-          )}
+          {/* Register Button Here */}
+          <div className="mt-8 flex justify-center">
+            <button
+              className="bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-800 transition-colors text-lg"
+              onClick={handleRegisterClick}
+            >
+              Register this property on Blockchain
+            </button>
+          </div>
         </div>
-        
-        {/* Add MintPopup component at the end, before closing div */}
-        {showMintPopup && propertyData && valuation && (
-          <MintPopup
-            isOpen={showMintPopup}
-            onClose={() => setShowMintPopup(false)}
-            propertyData={propertyData}
-            valuation={valuation}
-            onMintSuccess={handleVaultSuccess}
-            onMintError={handleVaultError}
-          />
-        )}
+      </div>
+    );
+  }
+
+  // Show registration component when user clicks register
+  if (step === 'register' && propertyData) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <PropertyRegistration
+          uploadedDocuments={uploadedDocs}
+          onRegistrationComplete={handleRegistrationComplete}
+        />
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={handleReset}
+            className="bg-gray-300 text-gray-700 py-2 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+          >
+            ← Back to Lookup
+          </button>
+        </div>
       </div>
     );
   }

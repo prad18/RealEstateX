@@ -69,13 +69,13 @@ export const PropertyNFTMinting: React.FC<PropertyNFTMintingProps> = ({
             setConsentSigned(true);
             const ipfsHash = 'Qma6e8dovN9UiaQ3PiDWWU5zEVr7h4h8E3xFtL3mkoD5aK';
             const result = await mintPropertyNFT(address, ipfsHash, valuation.estimatedValue);
-
-            if (result) {
-            const tokenId = await getnextTokenid();
-            setMintedTokenId(tokenId - 1);
+            const transferEvent = result.logs?.find((log: any) => log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef');
+            const tokenId = transferEvent?.topics[3] ? parseInt(transferEvent.topics[3], 16) : null;
+            setMintedTokenId(tokenId);
             setMintSuccess(true);
-            onMintSuccess(tokenId - 1);
-            }
+                  // if (tokenId !== null){
+                  //   await setPropertyVerified(tokenId , true);//we assume that this will always work;
+                  // }
         } catch (err: any) {
             onMintError(err.message || 'Minting Failed');
         } finally {
