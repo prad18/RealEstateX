@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { regridService } from '@/services/regridService';
 import { PropertyRegistration } from '@/components/property/PropertyRegistration';
-import { LocationPicker } from '@/components/LocationPicker';
+import { LocationPicker } from '@/components/property/LocationPicker';
 
+// --- INTERFACES (Originals Preserved) ---
 interface PropertyDetails {
   address: string;
   city: string;
@@ -52,6 +53,7 @@ interface PropertyValuation {
 }
 
 export const CoordinatePropertyLookup: React.FC = () => {
+  // --- STATE AND HANDLERS (Originals Preserved) ---
   const [coordinates, setCoordinates] = useState({
     lat: '',
     lon: '',
@@ -64,7 +66,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'input' | 'property' | 'valuation' | 'register'>('input');
 
-  // Registration handoff
   const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
   const [uploadedDocs] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
 
@@ -117,105 +118,140 @@ export const CoordinatePropertyLookup: React.FC = () => {
     setCoordinates({ lat: '', lon: '', radius: '100' });
     setRegistrationSuccess(null);
   };
-
-  const getMarketTrendColor = (trend: string) => {
-    switch (trend) {
-      case 'rising': return 'text-green-600';
-      case 'declining': return 'text-red-600';
-      default: return 'text-yellow-600';
-    }
-  };
-
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'positive': return 'text-green-600';
-      case 'negative': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
-
+  
   const handleRegisterClick = () => {
     setStep('register');
   };
 
   const handleRegistrationComplete = (propertyId: string) => {
     setRegistrationSuccess(`✅ Property registered on-chain! Property ID: ${propertyId}`);
+    // Reset to the beginning of the flow
+    setPropertyData(null);
+    setValuation(null);
+    setError(null);
     setStep('input');
   };
 
-  // === UI Steps ===
+  // --- STYLING HELPERS (Updated for new theme) ---
+  const getMarketTrendColor = (trend: string) => {
+    switch (trend) {
+      case 'rising': return 'text-green-400';
+      case 'declining': return 'text-red-400';
+      default: return 'text-yellow-400';
+    }
+  };
+
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
+      case 'positive': return 'text-green-400';
+      case 'negative': return 'text-red-400';
+      default: return 'text-gray-400';
+    }
+  };
+  
+  // === UI STEPS (Styled) ===
 
   if (step === 'input') {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-sm border p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Real Property Lookup</h1>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-blue-900 mb-2">Using Real Property Data</h3>
-            <p className="text-blue-800 text-sm">
-              This system now uses the Regrid API to fetch real property data. 
-              Use the interactive map to select a location and look up actual property information from government records.
-            </p>
-          </div>
-          
-          {/* Interactive Map Location Picker */}
-          <div className="mb-6">
-            <LocationPicker 
-              onChange={(location) => {
-                setCoordinates({
-                  lat: location.lat.toString(),
-                  lon: location.lon.toString(),
-                  radius: coordinates.radius
-                });
-              }}
-              initialLocation={{
-                lat: coordinates.lat ? parseFloat(coordinates.lat) : 39.7684,
-                lon: coordinates.lon ? parseFloat(coordinates.lon) : -86.1581,
-                address: ''
-              }}
-            />
-          </div>
-
-          {/* Search Radius Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Search Radius (meters)</label>
-            <input
-              type="number"
-              value={coordinates.radius}
-              onChange={(e) => setCoordinates(prev => ({ ...prev, radius: e.target.value }))}
-              placeholder="100"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <div className="max-w-4xl mx-auto p-6 animate-fade-in">
+        <div className="card-glass animate-fade-in-down">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Real Property Lookup
+              </h1>
+              <p className="text-gray-300 mt-2">
+                Discover property data using precise geolocation
+              </p>
+            </div>
+            <div className="gradient-border w-16 h-16">
+              <div className="gradient-border-content w-full h-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Selected Coordinates:</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Latitude:</strong> {coordinates.lat || 'Not selected'}
-                </div>
-                <div>
-                  <strong>Longitude:</strong> {coordinates.lon || 'Not selected'}
-                </div>
-              </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+              <label className="block text-sm font-medium text-gray-300 mb-4">
+                📍 Select Property Location
+              </label>
+              <LocationPicker
+                onChange={(location) => {
+                  setCoordinates({
+                    lat: location.lat.toString(),
+                    lon: location.lon.toString(),
+                    radius: coordinates.radius
+                  });
+                }}
+                initialLocation={{
+                  lat: coordinates.lat ? parseFloat(coordinates.lat) : 39.7684,
+                  lon: coordinates.lon ? parseFloat(coordinates.lon) : -86.1581,
+                  address: ''
+                }}
+              />
             </div>
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">{error}</p>
-              </div>
-            )}
+
+            <div className="max-w-xs animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Search Radius (meters)
+              </label>
+              <input
+                type="number"
+                value={coordinates.radius}
+                onChange={(e) => setCoordinates(prev => ({ ...prev, radius: e.target.value }))}
+                placeholder="100"
+                className="w-full px-4 py-3 glass rounded-xl border border-white/20 bg-white/5 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300"
+              />
+            </div>
+            
             {registrationSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">{registrationSuccess}</p>
+                <div className="glass rounded-xl p-4 border border-green-500/30 bg-gradient-to-r from-green-500/10 to-emerald-600/10 animate-scale-in">
+                <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <p className="text-green-300">{registrationSuccess}</p>
+                </div>
+                </div>
+            )}
+
+            {error && (
+              <div className="glass rounded-xl p-4 border border-red-500/30 bg-gradient-to-r from-red-500/10 to-red-600/10 animate-shake">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-red-300">{error}</p>
+                </div>
               </div>
             )}
+
             <button
               onClick={handleLookup}
               disabled={loading || !coordinates.lat || !coordinates.lon}
-              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full btn-primary text-lg py-4 animate-fade-in-up disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ animationDelay: "0.4s" }}
             >
-              {loading ? 'Looking up property...' : 'Lookup Property'}
+              {loading ? (
+                <div className="flex items-center justify-center space-x-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Looking up property...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center space-x-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  <span>Lookup Property</span>
+                </div>
+              )}
             </button>
           </div>
         </div>
@@ -225,145 +261,100 @@ export const CoordinatePropertyLookup: React.FC = () => {
 
   if (step === 'property' && propertyData) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-sm border p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Property Details</h1>
-            <button
-              onClick={handleReset}
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              ← Back to Search
-            </button>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Address:</span>
-                  <div className="text-gray-600">{propertyData.address}</div>
-                  <div className="text-gray-600">{propertyData.city}, {propertyData.state}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Owner:</span>
-                  <div className="text-gray-600">{propertyData.owner}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Property Type:</span>
-                  <div className="text-gray-600 capitalize">{propertyData.propertyType}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Area:</span>
-                  <div className="text-gray-600">{propertyData.area.toLocaleString()} sq ft</div>
-                </div>
-                <div>
-                  <span className="font-medium">Coordinates:</span>
-                  <div className="text-gray-600">
-                    {propertyData.coordinates.lat.toFixed(6)}, {propertyData.coordinates.lon.toFixed(6)}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Assessed Values</h2>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Land Value:</span>
-                  <div className="text-gray-600">
-                    {propertyData.value.land > 0 ? `$${propertyData.value.land.toLocaleString()}` : 'Not assessed'}
-                  </div>
-                </div>
-                <div>
-                  <span className="font-medium">Improvement Value:</span>
-                  <div className="text-gray-600">
-                    {propertyData.value.improvement > 0 ? `$${propertyData.value.improvement.toLocaleString()}` : 'Not assessed'}
-                  </div>
-                </div>
-                <div>
-                  <span className="font-medium">Total Assessed Value:</span>
-                  <div className="text-lg font-semibold text-green-600">
-                    {propertyData.value.total > 0 ? `$${propertyData.value.total.toLocaleString()}` : 'Not assessed'}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Zoning & Legal</h2>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Zoning Code:</span>
-                  <div className="text-gray-600">{propertyData.zoning.code}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Zoning Description:</span>
-                  <div className="text-gray-600">{propertyData.zoning.description}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Zoning Type:</span>
-                  <div className="text-gray-600">{propertyData.zoning.type}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Parcel Number:</span>
-                  <div className="text-gray-600">{propertyData.legal.parcelNumber}</div>
-                </div>
-                <div>
-                  <span className="font-medium">State Parcel Number:</span>
-                  <div className="text-gray-600 text-sm">{propertyData.legal.stateParcelNumber}</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Area Demographics</h2>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Median Household Income:</span>
-                  <div className="text-gray-600">
-                    {propertyData.demographics.medianIncome > 0 
-                      ? `$${propertyData.demographics.medianIncome.toLocaleString()}` 
-                      : 'Not available'}
-                  </div>
-                </div>
-                <div>
-                  <span className="font-medium">Housing Affordability Index:</span>
-                  <div className="text-gray-600">
-                    {propertyData.demographics.affordabilityIndex > 0 
-                      ? propertyData.demographics.affordabilityIndex 
-                      : 'Not available'}
-                  </div>
-                </div>
-                <div>
-                  <span className="font-medium">Population Density:</span>
-                  <div className="text-gray-600">
-                    {propertyData.demographics.populationDensity > 0 
-                      ? `${propertyData.demographics.populationDensity.toFixed(1)} per sq mi` 
-                      : 'Not available'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {propertyData.legal.legalDescription && (
-            <div className="mt-6 bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Legal Description</h2>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {propertyData.legal.legalDescription}
+      <div className="max-w-6xl mx-auto p-6 animate-fade-in">
+        <div className="card-glass animate-fade-in-down">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Property Details
+              </h1>
+              <p className="text-gray-300 mt-2">
+                Comprehensive property information from government records
               </p>
             </div>
-          )}
-          <div className="mt-8 flex gap-4">
-            <button
-              onClick={handleGetValuation}
-              disabled={loading}
-              className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Getting Valuation...' : 'Get Property Valuation'}
+            <button onClick={handleReset} className="btn-secondary flex items-center space-x-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+              </svg>
+              <span>Back to Search</span>
             </button>
           </div>
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-800">{error}</p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="interactive-card glass-dark rounded-2xl p-6 magnetic-hover animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+              <h2 className="text-xl font-semibold text-white mb-4">Basic Information</h2>
+              <div className="space-y-4">
+                  <div className="glass rounded-lg p-3 border border-white/10">
+                    <span className="font-medium text-gray-300">Address:</span>
+                    <div className="text-white mt-1">{propertyData.address}</div>
+                    <div className="text-gray-400">{propertyData.city}, {propertyData.state}</div>
+                  </div>
+                  <div className="glass rounded-lg p-3 border border-white/10">
+                      <span className="font-medium text-gray-300">Owner:</span>
+                      <div className="text-white mt-1">{propertyData.owner}</div>
+                  </div>
+                  <div className="glass rounded-lg p-3 border border-white/10">
+                      <span className="font-medium text-gray-300">Area:</span>
+                      <div className="text-white mt-1">{propertyData.area.toLocaleString()} sq ft</div>
+                  </div>
+              </div>
             </div>
+            <div className="interactive-card glass-dark rounded-2xl p-6 magnetic-hover animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+              <h2 className="text-xl font-semibold text-white mb-4">Assessed Values</h2>
+                <div className="space-y-4">
+                  <div className="glass rounded-lg p-3 border border-white/10">
+                      <span className="font-medium text-gray-300">Land Value:</span>
+                      <div className="text-white mt-1 text-lg font-semibold">
+                          {propertyData.value.land > 0 ? `$${propertyData.value.land.toLocaleString()}`: "Not assessed"}
+                      </div>
+                  </div>
+                  <div className="glass rounded-lg p-3 border border-white/10">
+                      <span className="font-medium text-gray-300">Improvement Value:</span>
+                      <div className="text-white mt-1 text-lg font-semibold">
+                          {propertyData.value.improvement > 0 ? `$${propertyData.value.improvement.toLocaleString()}` : "Not assessed"}
+                      </div>
+                  </div>
+                  <div className="glass rounded-lg p-4 border border-green-500/30 bg-gradient-to-r from-green-500/10 to-emerald-600/10">
+                      <span className="font-medium text-gray-300">Total Assessed Value:</span>
+                      <div className="text-2xl font-bold text-green-400 mt-2">
+                          {propertyData.value.total > 0 ? `$${propertyData.value.total.toLocaleString()}` : 'Not assessed'}
+                      </div>
+                  </div>
+                </div>
+            </div>
+          </div>
+          
+          {propertyData.legal.legalDescription && (
+            <div className="mt-8 card-glass animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+                <h2 className="text-xl font-semibold text-white mb-4">Legal Description</h2>
+                <div className="glass rounded-lg p-4 border border-white/10">
+                    <p className="text-gray-300 leading-relaxed">{propertyData.legal.legalDescription}</p>
+                </div>
+            </div>
+          )}
+
+          <div className="mt-8 flex gap-4 animate-fade-in-up" style={{ animationDelay: "0.4s" }} >
+            <button onClick={handleGetValuation} disabled={loading} className="flex-1 btn-primary text-lg py-4">
+              {loading ? (
+                <div className="flex items-center justify-center space-x-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Getting Valuation...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center space-x-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    </svg>
+                  <span>Get Property Valuation</span>
+                </div>
+              )}
+            </button>
+          </div>
+
+          {error && (
+             <div className="mt-6 glass rounded-xl p-4 border border-red-500/30 bg-gradient-to-r from-red-500/10 to-red-600/10 animate-shake">
+                <p className="text-red-300">{error}</p>
+             </div>
           )}
         </div>
       </div>
@@ -372,131 +363,134 @@ export const CoordinatePropertyLookup: React.FC = () => {
 
   if (step === 'valuation' && valuation && propertyData) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-sm border p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Property Valuation</h1>
-            <button
-              onClick={handleReset}
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              ← New Search
-            </button>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Valuation Summary</h2>
-              <div className="space-y-4">
+      <div className="max-w-6xl mx-auto p-6 animate-fade-in">
+        <div className="card-glass animate-fade-in-down">
+            <div className="flex justify-between items-center mb-8">
                 <div>
-                  <span className="text-sm text-gray-600">Estimated Market Value</span>
-                  <div className="text-3xl font-bold text-green-600">
-                    ${valuation.estimatedValue.toLocaleString()}
-                  </div>
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Property Valuation</h1>
+                    <p className="text-gray-300 mt-2">AI-powered market analysis and property insights</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-gray-600">Price per Sq Ft</span>
-                    <div className="text-lg font-semibold">
-                      ${valuation.pricePerSqFt.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-600">Confidence Score</span>
-                    <div className="text-lg font-semibold">
-                      {valuation.confidenceScore}%
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Market Trend</span>
-                  <div className={`text-lg font-semibold capitalize ${getMarketTrendColor(valuation.marketTrend)}`}>
-                    {valuation.marketTrend}
-                  </div>
-                </div>
-              </div>
+                <button onClick={handleReset} className="btn-secondary flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span>New Search</span>
+                </button>
             </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Property Summary</h2>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Address:</span>
-                  <div className="text-gray-600">{propertyData.address}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Area:</span>
-                  <div className="text-gray-600">{propertyData.area.toLocaleString()} sq ft</div>
-                </div>
-                <div>
-                  <span className="font-medium">Property Type:</span>
-                  <div className="text-gray-600 capitalize">{propertyData.propertyType}</div>
-                </div>
-                <div>
-                  <span className="font-medium">Assessed Value:</span>
-                  <div className="text-gray-600">
-                    {propertyData.value.total > 0 
-                      ? `$${propertyData.value.total.toLocaleString()}` 
-                      : 'Not assessed'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 bg-gray-50 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Valuation Factors</h2>
-            <div className="space-y-4">
-              {valuation.factors.map((factor, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-white rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{factor.factor}</div>
-                    <div className="text-sm text-gray-600">{factor.description}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`font-semibold ${getImpactColor(factor.impact)}`}>
-                      {factor.impact === 'positive' ? '+' : factor.impact === 'negative' ? '-' : ''}
-                      {factor.weight}%
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="interactive-card glass-dark rounded-2xl p-6 magnetic-hover animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+                    <h2 className="text-xl font-semibold text-white mb-4">Valuation Summary</h2>
+                    <div className="space-y-4 text-center">
+                        <div>
+                            <span className="text-sm text-gray-400">Estimated Market Value</span>
+                            <div className="text-4xl font-bold text-green-400 mt-2">
+                                ${valuation.estimatedValue.toLocaleString()}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="glass rounded-lg p-4 border border-white/10">
+                                <span className="text-sm text-gray-400">Price per Sq Ft</span>
+                                <div className="text-xl font-semibold text-white mt-1">${valuation.pricePerSqFt.toLocaleString()}</div>
+                            </div>
+                            <div className="glass rounded-lg p-4 border border-white/10">
+                                <span className="text-sm text-gray-400">Confidence Score</span>
+                                <div className="text-xl font-semibold text-white mt-1">{valuation.confidenceScore}%</div>
+                            </div>
+                        </div>
+                         <div className="glass rounded-lg p-4 border border-white/10">
+                            <span className="text-sm text-gray-400">Market Trend</span>
+                            <div className={`text-xl font-semibold capitalize mt-1 ${getMarketTrendColor(valuation.marketTrend)}`}>
+                                {valuation.marketTrend}
+                            </div>
+                        </div>
                     </div>
-                    <div className="text-xs text-gray-500 capitalize">{factor.impact}</div>
-                  </div>
                 </div>
-              ))}
+                <div className="interactive-card glass-dark rounded-2xl p-6 magnetic-hover animate-fade-in-up" style={{ animationDelay: "0.2s" }} >
+                    <h2 className="text-xl font-semibold text-white mb-4">Property Summary</h2>
+                     <div className="space-y-4">
+                        <div className="glass rounded-lg p-3 border border-white/10">
+                            <span className="font-medium text-gray-300">Address:</span>
+                            <div className="text-white mt-1">{propertyData.address}</div>
+                        </div>
+                         <div className="glass rounded-lg p-3 border border-white/10">
+                            <span className="font-medium text-gray-300">Property Type:</span>
+                            <div className="text-white mt-1 capitalize">{propertyData.propertyType}</div>
+                        </div>
+                        <div className="glass rounded-lg p-3 border border-white/10">
+                            <span className="font-medium text-gray-300">Assessed Value:</span>
+                             <div className="text-white mt-1">
+                                {propertyData.value.total > 0 ? `$${propertyData.value.total.toLocaleString()}` : 'Not assessed'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div className="mt-6 text-xs text-gray-500">
-            Last updated: {new Date(valuation.lastUpdated).toLocaleString()}
-          </div>
-          <div className="mt-8 flex justify-center">
-            <button
-              className="bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-800 transition-colors text-lg"
-              onClick={handleRegisterClick}
-            >
-              Register this property on Blockchain
-            </button>
-          </div>
+
+            <div className="mt-8 card-glass animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+                <h2 className="text-xl font-semibold text-white mb-4">Valuation Factors</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {valuation.factors.map((factor, index) => (
+                        <div key={index} className="interactive-card glass-dark rounded-xl p-4 magnetic-hover">
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                    <div className="font-medium text-white mb-1">{factor.factor}</div>
+                                    <div className="text-sm text-gray-400">{factor.description}</div>
+                                </div>
+                                <div className="text-right ml-4">
+                                    <div className={`font-bold text-lg ${getImpactColor(factor.impact)}`}>
+                                        {factor.impact === 'positive' ? '+' : factor.impact === 'negative' ? '-' : ''}
+                                        {factor.weight}%
+                                    </div>
+                                    <div className={`text-xs font-medium capitalize ${getImpactColor(factor.impact)}`}>
+                                        {factor.impact}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="mt-6 text-xs text-gray-500">
+                Last updated: {new Date(valuation.lastUpdated).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+            </div>
+
+            <div className="mt-8 flex justify-center animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+                <button
+                    className="w-full max-w-md btn-primary text-lg py-4"
+                    onClick={handleRegisterClick}
+                >
+                    Register this property on Blockchain
+                </button>
+            </div>
         </div>
       </div>
     );
   }
 
-  // Show registration component when user clicks register
   if (step === 'register' && propertyData && valuation) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <PropertyRegistration
-          uploadedDocuments={uploadedDocs}
-          propertyDetails={propertyData}
-          valuation={valuation}
-          onRegistrationComplete={handleRegistrationComplete}
-        />
+      <div className="max-w-4xl mx-auto p-6 animate-fade-in">
+        <div className="card-glass animate-fade-in-down p-8">
+            <PropertyRegistration
+                uploadedDocuments={uploadedDocs}
+                propertyDetails={propertyData}
+                valuation={valuation}
+                onRegistrationComplete={handleRegistrationComplete}
+            />
+        </div>
         <div className="mt-6 flex justify-center">
-          <button
-            onClick={handleReset}
-            className="bg-gray-300 text-gray-700 py-2 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-          >
-            ← Back to Lookup
-          </button>
+            <button
+                onClick={handleReset}
+                className="btn-secondary"
+            >
+                ← Back to Lookup
+            </button>
         </div>
       </div>
     );
   }
+
   return null;
 };

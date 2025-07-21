@@ -2,6 +2,8 @@
  * Web3 Service for RealEstateX
  * Handles property registration, token minting, and other Web3 operations
  */
+import { getContractInstance, getTokenIds } from './contracts';
+import { ipfsService } from './ipfs';
 
 export interface PropertyData {
   id: string;
@@ -59,10 +61,58 @@ export class Web3Service {
   /**
    * Get user's properties
    */
-  async getUserProperties(_address: string): Promise<PropertyData[]> {
-    // Mock implementation - in reality this would query the blockchain
-    return this.properties;
+async getUserProperties(address: string): Promise<PropertyData[]> {
+    try {
+      const contract = await getContractInstance('propertyNft');
+      const tokenIds = await getTokenIds(address);
+
+      if (!tokenIds || tokenIds.length === 0) {
+        return [];
+      }
+
+      const properties: PropertyData[] = await Promise.all(
+        tokenIds.map(async (tokenId: number) => {
+          const { ipfsHash, valuation, verified } = await contract.getProperty(tokenId);
+          
+          let metadata = {
+            title: `Property #${tokenId}`,
+            address: 'Metadata not available',
+            documents: [],
+            timestamp: new Date().toISOString()
+          };
+
+          try {
+            const ipfsData = await ipfsService.getJSON(ipfsHash);
+            metadata = {
+              title: ipfsData.title || `Property #${tokenId}`,
+              address: ipfsData.address || 'Address not found',
+              documents: ipfsData.documents || [],
+              timestamp: ipfsData.timestamp || new Date().toISOString()
+            };
+          } catch (e) {
+            console.error(`Could not fetch metadata for token ${tokenId} from IPFS. Using on-chain data as fallback.`, e);
+          }
+
+          return {
+            id: tokenId.toString(),
+            title: metadata.title,
+            address: metadata.address,
+            value: Number(valuation),
+            ipfsHash: ipfsHash,
+            documents: metadata.documents,
+            verificationStatus: verified ? 'verified' : 'pending',
+            createdAt: new Date(metadata.timestamp),
+          };
+        })
+      );
+
+      return properties;
+    } catch (error) {
+      console.error('Failed to fetch user properties from blockchain:', error);
+      return [];
+    }
   }
+
 
   /**
    * Mint HOMED tokens (mock implementation)
