@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { regridService } from '@/services/regridService';
 import { PropertyRegistration } from '@/components/property/PropertyRegistration';
+import { LocationPicker } from '@/components/LocationPicker';
 
 interface PropertyDetails {
   address: string;
@@ -65,7 +66,7 @@ export const CoordinatePropertyLookup: React.FC = () => {
 
   // Registration handoff
   const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
-  const [uploadedDocs, setUploadedDocs] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
+  const [uploadedDocs] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
 
   const handleLookup = async () => {
     if (!coordinates.lat || !coordinates.lon) {
@@ -153,54 +154,49 @@ export const CoordinatePropertyLookup: React.FC = () => {
             <h3 className="font-semibold text-blue-900 mb-2">Using Real Property Data</h3>
             <p className="text-blue-800 text-sm">
               This system now uses the Regrid API to fetch real property data. 
-              Enter coordinates to look up actual property information from government records.
+              Use the interactive map to select a location and look up actual property information from government records.
             </p>
           </div>
+          
+          {/* Interactive Map Location Picker */}
+          <div className="mb-6">
+            <LocationPicker 
+              onChange={(location) => {
+                setCoordinates({
+                  lat: location.lat.toString(),
+                  lon: location.lon.toString(),
+                  radius: coordinates.radius
+                });
+              }}
+              initialLocation={{
+                lat: coordinates.lat ? parseFloat(coordinates.lat) : 39.7684,
+                lon: coordinates.lon ? parseFloat(coordinates.lon) : -86.1581,
+                address: ''
+              }}
+            />
+          </div>
+
+          {/* Search Radius Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search Radius (meters)</label>
+            <input
+              type="number"
+              value={coordinates.radius}
+              onChange={(e) => setCoordinates(prev => ({ ...prev, radius: e.target.value }))}
+              placeholder="100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Latitude *</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={coordinates.lat}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, lat: e.target.value }))}
-                  placeholder="39.7684"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Longitude *</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={coordinates.lon}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, lon: e.target.value }))}
-                  placeholder="-86.1581"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search Radius (meters)</label>
-                <input
-                  type="number"
-                  value={coordinates.radius}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, radius: e.target.value }))}
-                  placeholder="100"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
             <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Sample Coordinates:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">Selected Coordinates:</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <strong>Monument Circle, Indianapolis:</strong><br />
-                  Lat: 39.7684, Lon: -86.1581
+                  <strong>Latitude:</strong> {coordinates.lat || 'Not selected'}
                 </div>
                 <div>
-                  <strong>Empire State Building, NYC:</strong><br />
-                  Lat: 40.7484, Lon: -73.9857
+                  <strong>Longitude:</strong> {coordinates.lon || 'Not selected'}
                 </div>
               </div>
             </div>

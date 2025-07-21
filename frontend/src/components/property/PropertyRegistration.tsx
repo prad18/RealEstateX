@@ -4,6 +4,7 @@ import { verificationService } from '@/services/verificationService';
 import { ipfsService } from '@/services/ipfs';
 import type { IPFSUploadResult } from '@/services/ipfs';
 import { PropertyNFTMinting } from './PropertyNFTMinting';
+import { LocationPicker } from '@/components/LocationPicker';
 
 interface PropertyDetails {
   address: string;

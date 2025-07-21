@@ -19,7 +19,7 @@ API_KEY = os.getenv("REGRID_API_KEY")
 nlp = spacy.load("en_core_web_sm")
 
 # Optional: Manually set Tesseract path if needed (adjust as per your env)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Users\ASUS\AppData\Local\Tesseract-OCR\tesseract.exe'
 
 # FastAPI app
 app = FastAPI()
