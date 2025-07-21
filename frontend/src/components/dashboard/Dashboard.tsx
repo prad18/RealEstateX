@@ -138,10 +138,6 @@ export const Dashboard: React.FC = () => {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 currentFlow === 'register' ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}>2</div>
-              <span className="text-sm font-medium">Register Property</span>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentFlow === 'verify' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-              }`}>3</div>
               <span className="text-sm font-medium">Verification</span>
             </div>
             <button
@@ -182,15 +178,8 @@ export const Dashboard: React.FC = () => {
                 onClick={() => setCurrentFlow('property-lookup')}
                 className="p-4 text-left border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
               >
-                <div className="text-lg font-medium text-gray-900">🔍 Property Lookup</div>
+                <div className="text-lg font-medium text-gray-900">🔍 Register Property</div>
                 <div className="text-sm text-gray-600 mt-1">Look up real property data by coordinates</div>
-              </button>
-              <button
-                onClick={() => setCurrentFlow('upload')}
-                className="p-4 text-left border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
-              >
-                <div className="text-lg font-medium text-gray-900">🏠 Register Property</div>
-                <div className="text-sm text-gray-600 mt-1">Upload documents and register new property</div>
               </button>
               <button
                 onClick={() => setCurrentFlow('mint-homed')}
@@ -278,13 +267,13 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Registration Flow */}
-      {currentFlow === 'register' && uploadedDocuments.length > 0 && (
-        <PropertyRegistration
-          uploadedDocuments={uploadedDocuments}
-          onRegistrationComplete={handleRegistrationComplete}
-        />
-      )}
+     {/* {currentFlow === 'register' && uploadedDocuments.length === 2 && propertyDetails && (
+  <PropertyRegistration
+    uploadedDocuments={uploadedDocuments}
+    propertyDetails={propertyDetails}
+    onRegistrationComplete={handleRegistrationComplete}
+  />
+)} */}
 
       {/* Verification Flow */}
       {currentFlow === 'verify' && currentPropertyId && (

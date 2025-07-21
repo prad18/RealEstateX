@@ -227,21 +227,21 @@ export async function repay(
  */
 export async function getActiveMortgagedProperties(userAddress: string, signer?: any) {
   const contract = await getContractInstance('vaultManager', signer);
-
-  // 1. Get all NFT token IDs ever mortgaged by the user
+  const PropertyContract = await getContractInstance('propertyNft');
   const allVaults: bigint[] = await contract.getUserVaults(userAddress);
-
-  const activeTokenIds: bigint[] = [];
-
-  // 2. Check which ones are still active
+  console.log("All vaults:", allVaults);
+  const activeTokenIds: Array<{Id : BigInt , value : number}> = [];
   for (const tokenId of allVaults) {
-    const vault = await contract.vaults(tokenId); // This returns the Vault struct
+    const vault = await contract.vaults(tokenId);
+    console.log(`Vault for token ${tokenId}:`, vault);
     if (vault.active) {
-      activeTokenIds.push(tokenId);
+      const {ipfsHash , valuation , verification} = await PropertyContract.getProperty(tokenId); 
+      const seventy = Number(valuation) * 0.8;
+      activeTokenIds.push({Id : tokenId, value: seventy});
     }
   }
-
-  return activeTokenIds; // Array of active NFT token IDs
+  console.log("Active tokens:", activeTokenIds);
+  return activeTokenIds;
 }
 
 

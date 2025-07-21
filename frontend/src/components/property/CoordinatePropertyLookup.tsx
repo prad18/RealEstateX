@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { regridService } from '@/services/regridService';
 import { PropertyRegistration } from '@/components/property/PropertyRegistration';
+import { LocationPicker } from '@/components/LocationPicker';
 
 interface PropertyDetails {
   address: string;
@@ -65,29 +66,21 @@ export const CoordinatePropertyLookup: React.FC = () => {
 
   // Registration handoff
   const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
-  const [uploadedDocs, setUploadedDocs] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
+  const [uploadedDocs] = useState<Array<{ file: File; ipfs_hash: string }>>([]);
 
   const handleLookup = async () => {
     if (!coordinates.lat || !coordinates.lon) {
       setError('Please enter both latitude and longitude');
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       const lat = parseFloat(coordinates.lat);
       const lon = parseFloat(coordinates.lon);
       const radius = parseInt(coordinates.radius);
-
-      // Get property data
       const result = await regridService.getPropertyByCoordinates(lat, lon, radius);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch property data');
-      }
-
+      if (!result.success) throw new Error(result.error || 'Failed to fetch property data');
       setPropertyData(result.data!);
       setStep('property');
     } catch (err) {
@@ -99,20 +92,14 @@ export const CoordinatePropertyLookup: React.FC = () => {
 
   const handleGetValuation = async () => {
     if (!propertyData) return;
-
     setLoading(true);
     setError(null);
-
     try {
       const result = await regridService.getPropertyValuation(
         propertyData.coordinates.lat,
         propertyData.coordinates.lon
       );
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to get valuation');
-      }
-
+      if (!result.success) throw new Error(result.error || 'Failed to get valuation');
       setValuation(result.data!);
       setStep('valuation');
     } catch (err) {
@@ -147,7 +134,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
     }
   };
 
-  // Additions for registration step
   const handleRegisterClick = () => {
     setStep('register');
   };
@@ -163,88 +149,67 @@ export const CoordinatePropertyLookup: React.FC = () => {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-sm border p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Real Property Lookup
-          </h1>
-          
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Real Property Lookup</h1>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-blue-900 mb-2">Using Real Property Data</h3>
             <p className="text-blue-800 text-sm">
               This system now uses the Regrid API to fetch real property data. 
-              Enter coordinates to look up actual property information from government records.
+              Use the interactive map to select a location and look up actual property information from government records.
             </p>
+          </div>
+          
+          {/* Interactive Map Location Picker */}
+          <div className="mb-6">
+            <LocationPicker 
+              onChange={(location) => {
+                setCoordinates({
+                  lat: location.lat.toString(),
+                  lon: location.lon.toString(),
+                  radius: coordinates.radius
+                });
+              }}
+              initialLocation={{
+                lat: coordinates.lat ? parseFloat(coordinates.lat) : 39.7684,
+                lon: coordinates.lon ? parseFloat(coordinates.lon) : -86.1581,
+                address: ''
+              }}
+            />
+          </div>
+
+          {/* Search Radius Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search Radius (meters)</label>
+            <input
+              type="number"
+              value={coordinates.radius}
+              onChange={(e) => setCoordinates(prev => ({ ...prev, radius: e.target.value }))}
+              placeholder="100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Latitude *
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={coordinates.lat}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, lat: e.target.value }))}
-                  placeholder="39.7684"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Longitude *
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={coordinates.lon}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, lon: e.target.value }))}
-                  placeholder="-86.1581"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Radius (meters)
-                </label>
-                <input
-                  type="number"
-                  value={coordinates.radius}
-                  onChange={(e) => setCoordinates(prev => ({ ...prev, radius: e.target.value }))}
-                  placeholder="100"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
             <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Sample Coordinates:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">Selected Coordinates:</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <strong>Monument Circle, Indianapolis:</strong><br />
-                  Lat: 39.7684, Lon: -86.1581
+                  <strong>Latitude:</strong> {coordinates.lat || 'Not selected'}
                 </div>
                 <div>
-                  <strong>Empire State Building, NYC:</strong><br />
-                  Lat: 40.7484, Lon: -73.9857
+                  <strong>Longitude:</strong> {coordinates.lon || 'Not selected'}
                 </div>
               </div>
             </div>
-
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-800">{error}</p>
               </div>
             )}
-
             {registrationSuccess && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-green-800">{registrationSuccess}</p>
               </div>
             )}
-
             <button
               onClick={handleLookup}
               disabled={loading || !coordinates.lat || !coordinates.lon}
@@ -271,7 +236,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
               ← Back to Search
             </button>
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
@@ -379,7 +343,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
               </div>
             </div>
           </div>
-
           {propertyData.legal.legalDescription && (
             <div className="mt-6 bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Legal Description</h2>
@@ -388,7 +351,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
               </p>
             </div>
           )}
-
           <div className="mt-8 flex gap-4">
             <button
               onClick={handleGetValuation}
@@ -398,7 +360,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
               {loading ? 'Getting Valuation...' : 'Get Property Valuation'}
             </button>
           </div>
-
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-red-800">{error}</p>
@@ -422,7 +383,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
               ← New Search
             </button>
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Valuation Summary</h2>
@@ -481,7 +441,6 @@ export const CoordinatePropertyLookup: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="mt-8 bg-gray-50 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Valuation Factors</h2>
             <div className="space-y-4">
@@ -502,12 +461,9 @@ export const CoordinatePropertyLookup: React.FC = () => {
               ))}
             </div>
           </div>
-
           <div className="mt-6 text-xs text-gray-500">
             Last updated: {new Date(valuation.lastUpdated).toLocaleString()}
           </div>
-
-          {/* Register Button Here */}
           <div className="mt-8 flex justify-center">
             <button
               className="bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-800 transition-colors text-lg"
@@ -522,11 +478,13 @@ export const CoordinatePropertyLookup: React.FC = () => {
   }
 
   // Show registration component when user clicks register
-  if (step === 'register' && propertyData) {
+  if (step === 'register' && propertyData && valuation) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <PropertyRegistration
           uploadedDocuments={uploadedDocs}
+          propertyDetails={propertyData}
+          valuation={valuation}
           onRegistrationComplete={handleRegistrationComplete}
         />
         <div className="mt-6 flex justify-center">
@@ -540,6 +498,5 @@ export const CoordinatePropertyLookup: React.FC = () => {
       </div>
     );
   }
-
   return null;
 };

@@ -1,16 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { getActiveMortgagedProperties, repay, balanceof } from '@/services/contracts';
+import { getActiveMortgagedProperties, repay } from '@/services/contracts';
 
 export const Repay: React.FC = () => {
   const { address } = useAccount();
-  const [activeTokens, setActiveTokens] = useState<bigint[]>([]);
+  const [activeTokens, setActiveTokens] = useState<Array<{ tokenId: bigint; value: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedToken, setSelectedToken] = useState<bigint | null>(null);
   const [repayAmount, setRepayAmount] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [lastRepaidToken, setLastRepaidToken] = useState<bigint | null>(null);
+
+  // Helper function is now inside the component and has access to setActiveTokens
+  const processAndSetTokens = (tokens: Array<{ Id: BigInt; value: number }>) => {
+    const uniqueTokensMap = new Map();
+    tokens.forEach(token => {
+      uniqueTokensMap.set(token.Id.toString(), {
+        tokenId: token.Id,
+        value: token.value,
+      });
+    });
+    setActiveTokens(Array.from(uniqueTokensMap.values()));
+  };
 
   // Fetch active mortgaged properties when component mounts or address changes
   useEffect(() => {
@@ -19,8 +32,7 @@ export const Repay: React.FC = () => {
       setLoading(true);
       try {
         const tokens = await getActiveMortgagedProperties(address);
-        // Deduplicate tokens (do not change any logic, just remove repeats)
-        setActiveTokens(Array.from(new Set(tokens.map(t => t.toString()))).map(BigInt));
+        processAndSetTokens(tokens);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch mortgaged properties');
       } finally {
@@ -43,10 +55,11 @@ export const Repay: React.FC = () => {
       const tx = await repay(Number(selectedToken), amount, address);
       await tx.wait();
       setSuccess(true);
+      setLastRepaidToken(selectedToken);
       
       // Refresh the list of active tokens
       const updatedTokens = await getActiveMortgagedProperties(address);
-      setActiveTokens(Array.from(new Set(updatedTokens.map(t => t.toString()))).map(BigInt));
+      processAndSetTokens(updatedTokens);
       
       // Reset form
       setSelectedToken(null);
@@ -86,35 +99,37 @@ export const Repay: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Token Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Property Token to Repay
               </label>
               <div className="grid grid-cols-2 gap-4">
-                {activeTokens.map((tokenId) => (
+                {activeTokens.map((tokenObj) => (
                   <button
-                    key={tokenId.toString()}
-                    onClick={() => setSelectedToken(tokenId)}
-                    className={`p-4 rounded-lg border ${
-                      selectedToken === tokenId
-                        ? 'border-blue-500 bg-blue-50'
+                    key={tokenObj.tokenId.toString()}
+                    onClick={() => setSelectedToken(tokenObj.tokenId)}
+                    className={`p-4 rounded-lg border text-left ${
+                      selectedToken === tokenObj.tokenId
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500'
                         : 'border-gray-200 hover:border-blue-300'
                     }`}
                   >
-                    <p className="font-medium">Token #{tokenId.toString()}</p>
+                    <p className="font-medium">Token #{tokenObj.tokenId.toString()}</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Value: ${tokenObj.value.toLocaleString()}
+                    </p>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Amount Input */}
             {selectedToken && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="repayAmount" className="block text-sm font-medium text-gray-700 mb-2">
                   Repayment Amount
                 </label>
                 <input
+                  id="repayAmount"
                   type="number"
                   value={repayAmount}
                   onChange={(e) => setRepayAmount(e.target.value)}
@@ -124,32 +139,22 @@ export const Repay: React.FC = () => {
               </div>
             )}
 
-            {/* Repay Button */}
             <button
               onClick={handleRepay}
               disabled={processing || !selectedToken || !repayAmount}
               className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {processing ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing Repayment...
-                </div>
-              ) : (
-                'Repay Mortgage'
-              )}
+              {processing ? 'Processing Repayment...' : 'Repay Mortgage'}
             </button>
 
-            {/* Success Message */}
-            {success && (
+            {success && lastRepaidToken && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-green-800 text-center">
-                  🎉 Successfully repaid mortgage for Token #{selectedToken?.toString()}
+                  🎉 Successfully repaid mortgage for Token #{lastRepaidToken.toString()}
                 </p>
               </div>
             )}
 
-            {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-800 text-center">{error}</p>

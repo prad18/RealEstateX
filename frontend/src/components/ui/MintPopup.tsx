@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { openvault, getTokenIds , giveApproval , setPropertyVerified } from '@/services/contracts';
+import { openvault, getTokenIds, giveApproval, setPropertyVerified } from '@/services/contracts';
 import { PropertyNFTMinting } from '@/components/property/PropertyNFTMinting';
 
 interface PropertyDetails {
@@ -56,8 +56,6 @@ export const MintPopup: React.FC<MintPopupProps> = ({
   const [selectedTokenId, setSelectedTokenId] = useState<number | null>(null);
   const [loadingTokens, setLoadingTokens] = useState(false);
 
-
-  
   useEffect(() => {
     if (isOpen && isConnected && address) {
       const fetchTokenIds = async () => {
@@ -92,13 +90,9 @@ export const MintPopup: React.FC<MintPopupProps> = ({
   };
 
   const handleConsent = async () => {
-    console.log("Entering into the concest function");
     if (!consentChecked || !selectedTokenId) return;
-    console.log("Sucessfully Passed the base case");
     setStep('signing');
-    
     try {
-    
       const consentMessage = `I, ${address}, consent to open a vault for the property NFT with Token ID #${selectedTokenId}.
 
 Property Details:
@@ -110,9 +104,7 @@ I understand this will interact with the vault manager contract and may require 
       const userSignature = await signMessageAsync({ message: consentMessage });
       setSignature(userSignature);
       setStep('minting');
-      console.log("Trying to mint the coins");
       await handleMint();
-      
     } catch (error: any) {
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
         onMintError('Signature was rejected by user');
@@ -126,25 +118,15 @@ I understand this will interact with the vault manager contract and may require 
   const handleMint = async () => {
     if (!selectedTokenId) return;
     setMinting(true);
-    
     try {
-      console.log('Getting into the minting Process');
-            
       // Step 1: Set property as verified (ADMIN ACTION - must be first)
-      console.log('Step 1: Setting NFT as verified with admin...');
       await setPropertyVerified(selectedTokenId, true);
-      
       // Step 2: Give approval (USER ACTION)
-      console.log('Step 2: Giving approval with user...');
       await giveApproval(selectedTokenId);
-      
       // Step 3: Open vault (USER ACTION)
-      console.log('Step 3: Opening vault with user...');
       await openvault(selectedTokenId);
-      
       onMintSuccess(selectedTokenId);
       handleClose();
-      
     } catch (error: any) {
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
         onMintError('Transaction was rejected by user');
@@ -183,28 +165,6 @@ I understand this will interact with the vault manager contract and may require 
           {step === 'selectToken' && (
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">Select a Property NFT to Use</h3>
-              {/* Temporary Mint Property NFT Button */}
-              <div className="mb-6">
-                <PropertyNFTMinting
-                  showMockOption={true}
-                  onMintSuccess={async (tokenId) => {
-                    // tokenId is the ID of the newly minted NFT!
-                    if (address) {
-                      const ids = await getTokenIds(address);
-                      setUserTokenIds(ids);
-                      // Optionally, auto-select the new token:
-                      setSelectedTokenId(tokenId);
-                      setStep('consent');
-                    }
-                  }}
-                  onMintError={onMintError}
-                  buttonText="🏠 Mint Property NFT (Mock Data)"
-                  buttonClassName="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-                />
-              </div>
-              {/* End Temporary Button */}
-              
-              
               {loadingTokens ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
