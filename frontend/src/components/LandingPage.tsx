@@ -4,7 +4,7 @@ import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { useAccount } from 'wagmi';
 
 // A simple component to handle fade-in animations for text
-const AnimatedText = ({ children, delay = 0 }) => {
+const AnimatedText = ({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ const AnimatedText = ({ children, delay = 0 }) => {
   );
 };
 
-export default function LandingPage({ onGetStarted }) {
+export default function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
   const { open } = useWeb3Modal();
   const { isConnected } = useAccount();
 

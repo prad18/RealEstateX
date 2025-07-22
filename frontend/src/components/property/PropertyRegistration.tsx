@@ -5,7 +5,7 @@ import type { IPFSUploadResult } from '@/services/ipfs';
 import { PropertyNFTMinting } from './PropertyNFTMinting';
 
 // --- INTERFACES ---
-interface PropertyDetails {
+export interface PropertyDetails {
   address: string;
   city: string;
   state: string;
@@ -18,7 +18,7 @@ interface PropertyDetails {
   legal: { parcelNumber: string; stateParcelNumber: string; legalDescription: string };
   demographics: { medianIncome: number; affordabilityIndex: number; populationDensity: number };
 }
-interface PropertyValuation {
+export interface PropertyValuation {
   estimatedValue: number;
   confidenceScore: number;
   pricePerSqFt: number;

@@ -3,6 +3,8 @@ import { useAccount } from 'wagmi';
 import { web3Service, type PropertyData } from '@/services/web3Service';
 import { DocumentUpload } from '@/components/upload/DocumentUpload';
 import { PropertyRegistration } from '@/components/property/PropertyRegistration';
+import { type PropertyDetails } from '@/components/property/PropertyRegistration';
+import { type PropertyValuation } from '@/components/property/PropertyRegistration';
 import { VerificationStatus } from '@/components/verification/VerificationStatus';
 import { CoordinatePropertyLookup } from '@/components/property/CoordinatePropertyLookup';
 import { MintPopup } from '@/components/ui/MintPopup';
@@ -51,6 +53,9 @@ export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect
   const [propertyCount, setPropertyCount] = useState<string>("0");
   const [showMintPopup, setShowMintPopup] = useState<boolean>(false);
   const [tokenToMintFrom, setTokenToMintFrom] = useState<number | null>(null);
+  const [currentPropertyDetails, setCurrentPropertyDetails] = useState<PropertyDetails | null>(null);
+  const [currentValuation, setCurrentValuation] = useState<PropertyValuation | null>(null);
+
 
   useEffect(() => {
     setShowMintPopup(currentFlow === 'mint-homed');
@@ -80,6 +85,8 @@ export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect
     setCurrentFlow('dashboard');
     setCurrentPropertyId(null);
     setUploadedDocuments([]);
+    setCurrentPropertyDetails(null); 
+    setCurrentValuation(null);
   };
 
   const handleUploadComplete = (documents: Array<{ file: File; ipfs_hash: string }>) => { setUploadedDocuments(documents); setCurrentFlow('register'); };
@@ -148,7 +155,14 @@ export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect
           <div className="card-glass p-8 animate-fade-in">
             {currentFlow === 'property-lookup' && <CoordinatePropertyLookup />}
             {currentFlow === 'upload' && <DocumentUpload onUploadComplete={handleUploadComplete} />}
-            {currentFlow === 'register' && <PropertyRegistration uploadedDocuments={uploadedDocuments} onRegistrationComplete={handleRegistrationComplete} />}
+            {currentFlow === 'register' && currentPropertyDetails && (
+              <PropertyRegistration
+                uploadedDocuments={uploadedDocuments}
+                onRegistrationComplete={handleRegistrationComplete}
+                propertyDetails={currentPropertyDetails}
+                valuation={currentValuation ?? undefined}
+              />
+            )}         
             {currentFlow === 'verify' && currentPropertyId && <VerificationStatus propertyId={currentPropertyId} onVerificationUpdate={handleVerificationComplete} />}
             {currentFlow === 'repay' && <Repay onBackToDashboard={handleBackToDashboard} />}
             {currentFlow === 'mint-homed-page' && <MintHomedPage onMintSuccess={handleMintSuccess} onMintError={handleMintError} onCancel={handleBackToDashboard} />}
