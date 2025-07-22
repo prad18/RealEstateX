@@ -11,15 +11,15 @@ declare global {
 
 export const CONTRACTS = {
   propertyNft: {
-    address: "0x44Df877FE3e1121fA2Dfbaa4a3D5bEaE5a031a15",
+    address: import.meta.env.VITE_PROPERTYNFT_ADDRESS,
     abi: VerifiedPropertyNFT.output.abi,
   },
   homedToken: {
-    address: "0x6Fa1baFB83D83f94D6a42787533382abe3Db2f53",
+    address: import.meta.env.VITE_HOMEDTOKEN_ADDRESS,
     abi: HOMEDToken.output.abi,
   },
   vaultManager: {
-    address: "0x4c1a40E5ba4E64436a77734f05Bc363fDf68ce9b",
+    address: import.meta.env.VITE_VAULTMANAGER_ADDRESS,
     abi: VaultManager.output.abi,
   }
 };

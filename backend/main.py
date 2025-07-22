@@ -18,9 +18,6 @@ API_KEY = os.getenv("REGRID_API_KEY")
 # Load spaCy English model (run `python -m spacy download en_core_web_sm` if not found)
 nlp = spacy.load("en_core_web_sm")
 
-# Optional: Manually set Tesseract path if needed (adjust as per your env)
-pytesseract.pytesseract.tesseract_cmd = r'F:\Tessaract-OCR\tesseract.exe'
-
 # FastAPI app
 app = FastAPI()
 
