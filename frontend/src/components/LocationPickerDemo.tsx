@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { LocationPicker } from './LocationPicker';
-import type { LocationData } from './LocationPicker';
+import { LocationPicker } from './property/LocationPicker';
+import type { LocationData } from './property/LocationPicker';
 
 export function LocationPickerDemo() {
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);

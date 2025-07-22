@@ -4,52 +4,27 @@ import { verificationService } from '@/services/verificationService';
 import { ipfsService } from '@/services/ipfs';
 import type { IPFSUploadResult } from '@/services/ipfs';
 import { PropertyNFTMinting } from './PropertyNFTMinting';
-import { LocationPicker } from '@/components/LocationPicker';
 
+// --- INTERFACES ---
 interface PropertyDetails {
   address: string;
   city: string;
   state: string;
   area: number;
   propertyType: 'residential' | 'commercial' | 'plot';
-  coordinates: {
-    lat: number;
-    lon: number;
-  };
+  coordinates: { lat: number; lon: number };
   owner: string;
-  value: {
-    land: number;
-    improvement: number;
-    total: number;
-  };
-  zoning: {
-    code: string;
-    description: string;
-    type: string;
-    subtype: string;
-  };
-  legal: {
-    parcelNumber: string;
-    stateParcelNumber: string;
-    legalDescription: string;
-  };
-  demographics: {
-    medianIncome: number;
-    affordabilityIndex: number;
-    populationDensity: number;
-  };
+  value: { land: number; improvement: number; total: number };
+  zoning: { code: string; description: string; type: string; subtype: string };
+  legal: { parcelNumber: string; stateParcelNumber: string; legalDescription: string };
+  demographics: { medianIncome: number; affordabilityIndex: number; populationDensity: number };
 }
 interface PropertyValuation {
   estimatedValue: number;
   confidenceScore: number;
   pricePerSqFt: number;
   marketTrend: 'rising' | 'stable' | 'declining';
-  factors: Array<{
-    factor: string;
-    impact: 'positive' | 'negative' | 'neutral';
-    weight: number;
-    description: string;
-  }>;
+  factors: Array<{ factor: string; impact: 'positive' | 'negative' | 'neutral'; weight: number; description: string }>;
   lastUpdated: string;
 }
 interface PropertyRegistrationProps {
@@ -59,30 +34,34 @@ interface PropertyRegistrationProps {
   valuation?: PropertyValuation;
 }
 
-export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
-  uploadedDocuments,
-  onRegistrationComplete,
-  propertyDetails,
-  valuation,
-}) => {
+// --- FILE UPLOAD COMPONENT ---
+const FileUploader = ({ title, onUpload, doc, isLoading }: { title: string; onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void; doc: { file: File; ipfs_hash: string } | null; isLoading: boolean; }) => (
+  <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-4">
+    <h3 className="font-semibold text-white">{title}</h3>
+    {!doc ? (<label className={`relative cursor-pointer btn-secondary w-full text-center block ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}><div className="flex items-center justify-center space-x-2">{isLoading ? (<><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Uploading...</span></>) : (<><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg><span>Choose File</span></>)}</div><input type="file" className="hidden" accept="application/pdf,image/*" disabled={isLoading} onChange={onUpload} /></label>) : (<div className="glass rounded-xl p-3 border border-green-500/30 bg-gradient-to-r from-green-500/10 to-emerald-600/10"><p className="text-green-300 text-sm font-medium truncate">✅ {doc.file.name}</p><a href={`https://gateway.pinata.cloud/ipfs/${doc.ipfs_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline break-all">IPFS: {doc.ipfs_hash}</a></div>)}
+  </div>
+);
+
+// --- MAIN COMPONENT ---
+export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRegistrationComplete, propertyDetails, valuation }) => {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
-  // Step: upload -> property -> consent -> review
   const [step, setStep] = useState<'upload' | 'property' | 'consent' | 'review'>('upload');
   const [propertyDoc, setPropertyDoc] = useState<{ file: File; ipfs_hash: string } | null>(null);
   const [idDoc, setIdDoc] = useState<{ file: File; ipfs_hash: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [showNFTMint, setShowNFTMint] = useState(false);
   const [consentSigned, setConsentSigned] = useState(false);
-  const [verifying, setVerifying] = React.useState(false);
-  const [verificationError, setVerificationError] = React.useState('');
-  const [verified, setVerified] = React.useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [activeUploader, setActiveUploader] = useState<'property' | 'id' | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [mintingComplete, setMintingComplete] = useState(false);
+  const [mintedTokenId, setMintedTokenId] = useState<number | null>(null);
 
-  // Move useEffect to top level and make it conditional internally
   React.useEffect(() => {
-    // Only run verification when on review step with consent signed and not already verifying/verified
     if (step === 'review' && consentSigned && !verifying && !verified && !verificationError) {
       (async () => {
         setVerifying(true);
@@ -91,40 +70,23 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
           const formData = new FormData();
           if (propertyDoc?.file) formData.append('title', propertyDoc.file);
           if (idDoc?.file) formData.append('id', idDoc.file);
-
-          // If your backend is NOT at the same origin, set full URL here!
-          const resp = await fetch('http://127.0.0.1:8000/verify', {
-            method: 'POST',
-            body: formData,
-          });
-
+          const resp = await fetch('http://127.0.0.1:8000/verify', { method: 'POST', body: formData });
           const data = await resp.json();
-
-          if (resp.ok && data.match === true) {
-            setVerified(true);
-          } else {
-            setVerificationError(data.error || 'Document verification failed.');
-          }
-        } catch (err) {
-          setVerificationError('Verification request failed.');
-        } finally {
-          setVerifying(false);
-        }
+          if (resp.ok && data.match === true) setVerified(true);
+          else setVerificationError(data.error || 'Document verification failed.');
+        } catch (err) { setVerificationError('Verification request failed.'); }
+        finally { setVerifying(false); }
       })();
     }
-  }, [step, consentSigned, verifying, verified, verificationError, propertyDoc?.file, idDoc?.file]);
+  }, [step, consentSigned, verifying, verified, verificationError, propertyDoc?.file, idDoc?.file, retryCount]);
 
-  // --- IPFS UPLOAD HANDLERS ---
-  const handleFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setDoc: React.Dispatch<React.SetStateAction<{ file: File; ipfs_hash: string } | null>>
-  ) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, setDoc: React.Dispatch<React.SetStateAction<{ file: File; ipfs_hash: string } | null>>, uploaderType: 'property' | 'id') => {
     setError('');
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
-
     setIsLoading(true);
+    setActiveUploader(uploaderType);
     try {
       const ipfs: IPFSUploadResult = await ipfsService.uploadFile(file);
       setDoc({ file, ipfs_hash: ipfs.hash });
@@ -133,15 +95,14 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
       setDoc(null);
     }
     setIsLoading(false);
+    setActiveUploader(null);
   };
 
-  // Continue after both uploads
   const handleContinue = () => {
     if (propertyDoc && idDoc) setStep('property');
     else setError('Please upload both Property Document and ID Proof');
   };
 
-  // Consent step
   const handleSignConsent = async () => {
     if (!address || !propertyDetails) return;
     setIsLoading(true);
@@ -149,196 +110,77 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({
     try {
       const consentMessage = `I confirm that I am the legal owner of the property at ${propertyDetails.address} and consent to tokenize this property on the blockchain. Wallet: ${address}`;
       const signature = await signMessageAsync({ message: consentMessage });
-      if (signature) {
-        setConsentSigned(true);
-        setStep('review');
-      }
-    } catch (err) {
-      setError('Failed to sign consent message');
-    } finally {
-      setIsLoading(false);
-    }
+      if (signature) { setConsentSigned(true); setStep('review'); }
+    } catch (err) { setError('Failed to sign consent message'); }
+    finally { setIsLoading(false); }
+  };
+  
+  const handleMintSuccess = (tokenId: number) => {
+    setMintingComplete(true);
+    setMintedTokenId(tokenId);
   };
 
-  const handleSubmitRegistration = async () => {
-    if (!propertyDetails || !address || !consentSigned) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const propertyId = `prop_${propertyDetails.coordinates.lat}_${propertyDetails.coordinates.lon}_${address.slice(2, 8)}`;
-      const documentHashes = [propertyDoc!, idDoc!].map(doc => doc.ipfs_hash);
-      await verificationService.submitForVerification(
-        propertyId,
-        documentHashes,
-        {
-          address: propertyDetails.address,
-          estimatedValue: propertyDetails.value.total || 0,
-          ownerName: propertyDetails.owner
-        }
-      );
-      onRegistrationComplete(propertyId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // --- Render Steps ---
-
+  // --- RENDER STEPS ---
   if (step === 'upload') {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 space-y-8">
-        <h2 className="text-xl font-semibold mb-4">Upload Required Documents</h2>
-        <div>
-          <h3 className="font-medium mb-2">1. Upload Property Document</h3>
-          <input
-            type="file"
-            accept="application/pdf,image/*"
-            disabled={isLoading}
-            onChange={e => handleFileUpload(e, setPropertyDoc)}
-          />
-          {propertyDoc && (
-            <p className="text-green-700 mt-2 break-all">
-              Property Document uploaded ✅<br />
-              IPFS: <a href={`https://gateway.pinata.cloud/ipfs/${propertyDoc.ipfs_hash}`} target="_blank" rel="noopener noreferrer">{propertyDoc.ipfs_hash}</a>
-            </p>
-          )}
-        </div>
-        <div>
-          <h3 className="font-medium mb-2">2. Upload ID Proof</h3>
-          <input
-            type="file"
-            accept="application/pdf,image/*"
-            disabled={isLoading}
-            onChange={e => handleFileUpload(e, setIdDoc)}
-          />
-          {idDoc && (
-            <p className="text-green-700 mt-2 break-all">
-              ID Proof uploaded ✅<br />
-              IPFS: <a href={`https://gateway.pinata.cloud/ipfs/${idDoc.ipfs_hash}`} target="_blank" rel="noopener noreferrer">{idDoc.ipfs_hash}</a>
-            </p>
-          )}
-        </div>
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
-        <button
-          onClick={handleContinue}
-          disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors mt-4"
-        >
-          Continue
-        </button>
+      <div className="card-glass p-8 space-y-8 animate-fade-in">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Register Property: Step 1</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FileUploader title="1. Upload Property Document" onUpload={e => handleFileUpload(e, setPropertyDoc, 'property')} doc={propertyDoc} isLoading={isLoading && activeUploader === 'property'} /><FileUploader title="2. Upload ID Proof" onUpload={e => handleFileUpload(e, setIdDoc, 'id')} doc={idDoc} isLoading={isLoading && activeUploader === 'id'} /></div>
+        {error && ( <p className="text-red-400 text-center">{error}</p> )}
+        <button onClick={handleContinue} disabled={isLoading || !propertyDoc || !idDoc} className="w-full btn-primary text-lg py-4">Continue</button>
       </div>
     );
   }
-
+  
   if (step === 'property') {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Verify Property Information</h2>
-        <div className="mb-6">
-          <div><strong>Address:</strong> {propertyDetails.address}</div>
-          <div><strong>City:</strong> {propertyDetails.city}, {propertyDetails.state}</div>
-          <div><strong>Type:</strong> {propertyDetails.propertyType}</div>
-          <div><strong>Area:</strong> {propertyDetails.area.toLocaleString()} sq ft</div>
-          <div><strong>Owner:</strong> {propertyDetails.owner}</div>
-          <div><strong>Coordinates:</strong> {propertyDetails.coordinates.lat.toFixed(6)}, {propertyDetails.coordinates.lon.toFixed(6)}</div>
-          <div><strong>Assessed Value:</strong> {propertyDetails.value.total > 0 ? `$${propertyDetails.value.total.toLocaleString()}` : 'Not assessed'}</div>
-          <div>
-            <strong>Uploaded Documents:</strong>
-            {propertyDoc ? " Property Document ✅" : ""}
-            {idDoc ? ", ID Proof ✅" : ""}
-          </div>
-        </div>
-        {error && <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4"><p className="text-red-800">{error}</p></div>}
-        <div className="flex gap-4">
-          <button
-            onClick={() => setStep('upload')}
-            className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-          >
-            Back to Upload
-          </button>
-          <button
-            onClick={handleSignConsent}
-            disabled={isLoading}
-            className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {isLoading ? 'Signing...' : 'Sign Ownership Consent'}
-          </button>
-        </div>
+      <div className="card-glass p-8 space-y-6 animate-fade-in">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Confirm Details: Step 2</h2>
+        <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-3"><p className="text-white"><strong>Address:</strong> {propertyDetails.address}</p><p className="text-white"><strong>Owner:</strong> {propertyDetails.owner}</p><p className="text-white"><strong>Assessed Value:</strong> {propertyDetails.value.total > 0 ? `$${propertyDetails.value.total.toLocaleString()}` : 'Not assessed'}</p><p className="text-green-400"><strong>Uploaded Docs:</strong> Property Title ✅, ID Proof ✅</p></div>
+        {error && <p className="text-red-400 text-center">{error}</p>}
+        <div className="flex gap-4"><button onClick={() => setStep('upload')} className="w-full btn-secondary text-lg py-4">Back</button><button onClick={handleSignConsent} disabled={isLoading} className="w-full btn-primary text-lg py-4 bg-green-600 hover:bg-green-700">{isLoading ? 'Signing...' : 'Sign & Continue'}</button></div>
       </div>
     );
   }
- 
-  // Final review page after consent is signed.
+  
   if (step === 'review' && consentSigned) {
-    // Loading spinner while verifying
     if (verifying) {
-      return (
-        <div className="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center">
-          <span className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></span>
-          <p className="text-blue-800 text-center font-semibold">Verifying your documents…</p>
-        </div>
-      );
+      return (<div className="card-glass p-8 flex flex-col items-center justify-center space-y-4"><div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div><p className="text-blue-300 font-semibold text-xl">Verifying your documents...</p><p className="text-gray-400 text-sm text-center">AI is analyzing document data against ownership records.</p></div>);
     }
 
-    // Error UI if verification fails
     if (verificationError) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex flex-col items-center">
-          <p className="text-red-800 text-center font-semibold">{verificationError}</p>
-          <p className="text-gray-500 text-center text-sm mt-2">
-            Please check the uploaded documents and try again.
-          </p>
-        </div>
-      );
+      return (<div className="card-glass p-8 flex flex-col items-center justify-center space-y-4"><h3 className="text-2xl font-bold text-red-400">Verification Failed</h3><p className="text-red-300 text-center">{verificationError}</p><button onClick={() => { setVerificationError(''); setRetryCount(prev => prev + 1); }} className="btn-secondary mt-4">Try Again</button></div>);
     }
-
-    // Only allow minting after verification
+    
     if (verified) {
-      const assetIpfsHash = propertyDoc ? propertyDoc.ipfs_hash : undefined;
-      return (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Property Details</h2>
-          <div className="mb-6">
-            <div><strong>Address:</strong> {propertyDetails.address}</div>
-            <div><strong>City:</strong> {propertyDetails.city}, {propertyDetails.state}</div>
-            <div><strong>Type:</strong> {propertyDetails.propertyType}</div>
-            <div><strong>Area:</strong> {propertyDetails.area.toLocaleString()} sq ft</div>
-            <div><strong>Owner:</strong> {propertyDetails.owner}</div>
-            <div><strong>Coordinates:</strong> {propertyDetails.coordinates.lat.toFixed(6)}, {propertyDetails.coordinates.lon.toFixed(6)}</div>
-            <div><strong>Assessed Value:</strong> {propertyDetails.value.total > 0 ? `$${propertyDetails.value.total.toLocaleString()}` : 'Not assessed'}</div>
-            <div><strong>Documents:</strong> 2 files uploaded</div>
+      if (!mintingComplete) {
+        return (
+          <div className="card-glass p-8 space-y-6 animate-fade-in">
+            <div className="text-center"><h2 className="text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">Mint Property NFT: Final Step</h2><p className="text-green-400 mt-2 font-semibold">✅ Ownership Verified!</p></div>
+            <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-3"><p className="text-white"><strong>Address:</strong> {propertyDetails.address}</p><p className="text-white"><strong>Owner:</strong> {propertyDetails.owner}</p><p className="text-white"><strong>Market Value:</strong> {valuation ? `$${valuation.estimatedValue.toLocaleString()}` : 'N/A'}</p></div>
+            <div className="w-full">
+              <PropertyNFTMinting 
+                propertyDetails={propertyDetails} 
+                valuation={valuation} 
+                assetIpfsHash={propertyDoc?.ipfs_hash} 
+                onMintSuccess={handleMintSuccess} 
+              />
+            </div>
           </div>
-          <div className="flex justify-end">
-            {!showNFTMint ? (
-              <button
-                onClick={() => setShowNFTMint(true)}
-                disabled={isLoading}
-                className="bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-800 disabled:opacity-50 transition-colors text-lg"
-              >
-                {isLoading ? 'Minting...' : 'Mint Property NFT'}
-              </button>
-            ) : (
-              <div className="w-full">
-                <PropertyNFTMinting
-                  propertyDetails={propertyDetails}
-                  valuation={valuation}
-                  assetIpfsHash={assetIpfsHash}
-                  // Add more props if needed
-                />
-              </div>
-            )}
+        );
+      } else {
+        return (
+          <div className="card-glass p-8 flex flex-col items-center justify-center space-y-6 animate-scale-in">
+            <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-glow"><svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+            <h2 className="text-3xl font-bold text-white">Minting Complete!</h2>
+            <p className="text-gray-300">Your property has been successfully tokenized.</p>
+            <div className="glass-dark p-4 rounded-xl text-center"><p className="text-gray-400 text-sm">NFT Token ID</p><p className="text-white font-bold text-lg">{mintedTokenId}</p></div>
+            <button onClick={() => onRegistrationComplete('flow_complete')} className="w-full max-w-xs btn-primary text-lg py-3 mt-4">Back to Dashboard</button>
           </div>
-        </div>
-      );
+        );
+      }
     }
-
-    // Fallback (should never show)
+    
     return null;
   }
 
