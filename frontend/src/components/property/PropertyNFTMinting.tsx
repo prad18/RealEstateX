@@ -28,15 +28,16 @@ interface PropertyNFTMintingProps {
   propertyDetails?: PropertyDetails;
   valuation?: PropertyValuation;
   assetIpfsHash?: string;
-  // ✨ ADDED: Callback to notify parent component on success
   onMintSuccess?: (tokenId: number) => void;
+  onBackToDashboard?: () => void;
 }
 
 export const PropertyNFTMinting: React.FC<PropertyNFTMintingProps> = ({
   propertyDetails,
   valuation,
   assetIpfsHash,
-  onMintSuccess, // ✨ ADDED
+  onMintSuccess,
+  onBackToDashboard,
 }) => {
   // --- STATE AND HANDLERS (Originals Preserved) ---
   const { address } = useAccount();
@@ -66,7 +67,6 @@ export const PropertyNFTMinting: React.FC<PropertyNFTMintingProps> = ({
       );
       const tokenId = transferEvent?.topics[3] ? parseInt(transferEvent.topics[3], 16) : 1;
       
-      // ✨ ADDED: Notify the parent component of the success!
       if (onMintSuccess) {
         onMintSuccess(tokenId);
       }
@@ -94,8 +94,15 @@ export const PropertyNFTMinting: React.FC<PropertyNFTMintingProps> = ({
     <div className="space-y-4">
       {/* Property Summary */}
       <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-3">
-        <h4 className="text-xl font-semibold text-white mb-4">Minting Summary</h4>
-        <div className="text-gray-300 text-sm space-y-2">
+        <div className="flex items-start justify-between">
+          <h4 className="text-xl font-semibold text-white">Minting Summary</h4>
+          {/* ✨ ADDED: Back to Dashboard Button */}
+          {onBackToDashboard && (
+              <button onClick={onBackToDashboard} className="btn-secondary text-sm">
+                  Back to Dashboard
+              </button>
+          )}
+        </div>        <div className="text-gray-300 text-sm space-y-2">
           <p><strong>Address:</strong> {propertyDetails.address}</p>
           <p><strong>Value:</strong> ${valuation.estimatedValue.toLocaleString()}</p>
           {assetIpfsHash && (

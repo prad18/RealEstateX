@@ -32,6 +32,7 @@ interface PropertyRegistrationProps {
   onRegistrationComplete: (propertyId: string) => void;
   propertyDetails: PropertyDetails;
   valuation?: PropertyValuation;
+  onBackToDashboard?: () => void; // ✨ ACCEPT the prop here
 }
 
 // --- FILE UPLOAD COMPONENT ---
@@ -43,7 +44,7 @@ const FileUploader = ({ title, onUpload, doc, isLoading }: { title: string; onUp
 );
 
 // --- MAIN COMPONENT ---
-export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRegistrationComplete, propertyDetails, valuation }) => {
+export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRegistrationComplete, propertyDetails, valuation, onBackToDashboard }) => {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
@@ -124,7 +125,10 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
   if (step === 'upload') {
     return (
       <div className="card-glass p-8 space-y-8 animate-fade-in">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Register Property: Step 1</h2>
+        <div className="flex items-start justify-between">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Register Property: Step 1</h2>
+            {onBackToDashboard && <button onClick={onBackToDashboard} className="btn-secondary">Back to Dashboard</button>}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FileUploader title="1. Upload Property Document" onUpload={e => handleFileUpload(e, setPropertyDoc, 'property')} doc={propertyDoc} isLoading={isLoading && activeUploader === 'property'} /><FileUploader title="2. Upload ID Proof" onUpload={e => handleFileUpload(e, setIdDoc, 'id')} doc={idDoc} isLoading={isLoading && activeUploader === 'id'} /></div>
         {error && ( <p className="text-red-400 text-center">{error}</p> )}
         <button onClick={handleContinue} disabled={isLoading || !propertyDoc || !idDoc} className="w-full btn-primary text-lg py-4">Continue</button>
@@ -135,7 +139,10 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
   if (step === 'property') {
     return (
       <div className="card-glass p-8 space-y-6 animate-fade-in">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Confirm Details: Step 2</h2>
+        <div className="flex items-start justify-between">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Confirm Details: Step 2</h2>
+            {onBackToDashboard && <button onClick={onBackToDashboard} className="btn-secondary">Back to Dashboard</button>}
+        </div>
         <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-3"><p className="text-white"><strong>Address:</strong> {propertyDetails.address}</p><p className="text-white"><strong>Owner:</strong> {propertyDetails.owner}</p><p className="text-white"><strong>Assessed Value:</strong> {propertyDetails.value.total > 0 ? `$${propertyDetails.value.total.toLocaleString()}` : 'Not assessed'}</p><p className="text-green-400"><strong>Uploaded Docs:</strong> Property Title ✅, ID Proof ✅</p></div>
         {error && <p className="text-red-400 text-center">{error}</p>}
         <div className="flex gap-4"><button onClick={() => setStep('upload')} className="w-full btn-secondary text-lg py-4">Back</button><button onClick={handleSignConsent} disabled={isLoading} className="w-full btn-primary text-lg py-4 bg-green-600 hover:bg-green-700">{isLoading ? 'Signing...' : 'Sign & Continue'}</button></div>
@@ -163,7 +170,8 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
                 propertyDetails={propertyDetails} 
                 valuation={valuation} 
                 assetIpfsHash={propertyDoc?.ipfs_hash} 
-                onMintSuccess={handleMintSuccess} 
+                onMintSuccess={handleMintSuccess}
+                onBackToDashboard={onBackToDashboard} // ✨ PASS the prop down
               />
             </div>
           </div>

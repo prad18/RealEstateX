@@ -162,22 +162,22 @@ export const Dashboard: React.FC = () => {
                 <div className="text-sm text-gray-400">Generate stablecoins</div>
             </button>
             <button onClick={() => setCurrentFlow('repay')} className="interactive-card glass-dark rounded-2xl p-4 text-left magnetic-hover group"><div className="text-lg font-bold text-white mb-1 group-hover:text-orange-300 transition-colors">📊 Repay Loan</div><div className="text-sm text-gray-400">Manage your debt</div></button></div></div>
-            <div className="card-glass animate-fade-in-up p-6" style={{ animationDelay: "0.3s" }}><h2 className="text-2xl font-bold text-white mb-6">Your Properties</h2>{properties.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{properties.map((property, index) => (<div key={property.id} className="glass rounded-2xl p-6 border border-white/20 hover:border-white/40 flex flex-col justify-between transition-all duration-300 transform hover:scale-105" style={{ animationDelay: `${0.1 * index}s` }}><div><div className="flex items-start justify-between mb-4"><h3 className="font-semibold text-white text-lg">{property.title}</h3><span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${property.verificationStatus === "verified" ? "bg-green-500/20 text-green-400" : property.verificationStatus === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{property.verificationStatus}</span></div><p className="text-white/70 text-sm mb-4 line-clamp-2">{property.address}</p><div className="text-2xl font-bold text-white">${property.value.toLocaleString()}</div><div className="text-white/60 text-xs mt-1">{property.documents.length} docs • {new Date(property.createdAt).toLocaleDateString()}</div></div><button onClick={() => handleInitiateMint(property)} disabled={property.verificationStatus !== 'verified'} className="mt-4 w-full btn-primary bg-green-600 hover:bg-green-700 disabled:bg-gray-500/50 disabled:text-gray-400 disabled:cursor-not-allowed">Mint from this Property</button></div>))}</div>) : (<div className="text-center py-16"><h3 className="text-xl font-semibold text-white mb-2">No Properties Yet</h3><p className="text-white/70 mb-6">Click "Register Property" to get started</p></div>)}</div>
+            <div className="card-glass animate-fade-in-up p-6" style={{ animationDelay: "0.3s" }}><h2 className="text-2xl font-bold text-white mb-6">Your Properties</h2>{properties.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{properties.map((property, index) => (<div key={property.id} className="glass rounded-2xl p-6 border border-white/20 hover:border-white/40 flex flex-col justify-between transition-all duration-300 transform hover:scale-105" style={{ animationDelay: `${0.1 * index}s` }}><div><div className="flex items-start justify-between mb-4"><h3 className="font-semibold text-white text-lg">{property.title}</h3><span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${property.verificationStatus === "verified" ? "bg-green-500/20 text-green-400" : property.verificationStatus === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{property.verificationStatus}</span></div><p className="text-white/70 text-sm mb-4 line-clamp-2">{property.address}</p><div className="text-2xl font-bold text-white">${property.value.toLocaleString()}</div><div className="text-white/60 text-xs mt-1">{property.documents.length} docs • {new Date(property.createdAt).toLocaleDateString()}</div></div><button onClick={() => handleInitiateMint(property)} className="mt-4 w-full btn-primary bg-green-600 hover:bg-green-700 disabled:bg-gray-500/50 disabled:text-gray-400 disabled:cursor-not-allowed">Mint from this Property</button></div>))}</div>) : (<div className="text-center py-16"><h3 className="text-xl font-semibold text-white mb-2">No Properties Yet</h3><p className="text-white/70 mb-6">Click "Register Property" to get started</p></div>)}</div>
           </div>
         )}
         
         {['property-lookup', 'upload', 'register', 'verify', 'repay', 'mint-homed-page'].includes(currentFlow) && (
           <div className="card-glass p-8 animate-fade-in">
-            {currentFlow === 'property-lookup' && <CoordinatePropertyLookup />}
+            {currentFlow === 'property-lookup' && <CoordinatePropertyLookup onBackToDashboard={handleBackToDashboard} />}
             {currentFlow === 'upload' && <DocumentUpload onUploadComplete={handleUploadComplete} />}
             {currentFlow === 'register' && 
-              <PropertyRegistration 
-                  uploadedDocuments={uploadedDocuments}
+              <PropertyRegistration                  uploadedDocuments={uploadedDocuments}
                   onRegistrationComplete={handleRegistrationComplete}
+                  onBackToDashboard={handleBackToDashboard}
               />
             }
             {currentFlow === 'verify' && currentPropertyId && <VerificationStatus propertyId={currentPropertyId} onVerificationUpdate={handleVerificationComplete} />}
-            {currentFlow === 'repay' && <Repay />}
+            {currentFlow === 'repay' && <Repay onBackToDashboard={handleBackToDashboard} />}
             {currentFlow === 'mint-homed-page' && 
                 <MintHomedPage 
                     onMintSuccess={handleMintSuccess}
