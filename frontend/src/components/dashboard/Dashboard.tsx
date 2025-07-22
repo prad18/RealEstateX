@@ -6,7 +6,6 @@ import { PropertyRegistration } from '@/components/property/PropertyRegistration
 import { VerificationStatus } from '@/components/verification/VerificationStatus';
 import { CoordinatePropertyLookup } from '@/components/property/CoordinatePropertyLookup';
 import { MintPopup } from '@/components/ui/MintPopup';
-import { FaucetLink } from '@/components/wallet/FaucetLink';
 import { type VerificationResult } from '@/services/verificationService';
 import { balanceof, getCountofProperty } from '@/services/contracts';
 import { Repay } from '@/components/Repay/Repay';

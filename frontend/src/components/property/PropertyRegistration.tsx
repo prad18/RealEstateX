@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { verificationService } from '@/services/verificationService';
 import { ipfsService } from '@/services/ipfs';
 import type { IPFSUploadResult } from '@/services/ipfs';
 import { PropertyNFTMinting } from './PropertyNFTMinting';

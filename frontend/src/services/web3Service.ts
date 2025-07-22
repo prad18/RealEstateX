@@ -190,17 +190,6 @@ async getUserProperties(address: string): Promise<PropertyData[]> {
       healthFactor: totalValue > 0 ? (totalValue / (parseFloat(this.mockBalance.homedBalance) || 1)) : 0
     };
   }
-
-  /**
-   * Simulate blockchain transaction
-   */
-  private async simulateTransaction(operation: string): Promise<string> {
-    console.log(`🔄 Simulating ${operation} transaction...`);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const txHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-    console.log(`✅ Transaction completed: ${txHash}`);
-    return txHash;
-  }
 }
 
 // Export singleton instance
