@@ -69,7 +69,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
           const formData = new FormData();
           if (propertyDoc?.file) formData.append('title', propertyDoc.file);
           if (idDoc?.file) formData.append('id', idDoc.file);
-          const resp = await fetch('http://127.0.0.1:8000/verify', { method: 'POST', body: formData });
+          const resp = await fetch(import.meta.env.VITE_API_URL, { method: 'POST', body: formData });
           const data = await resp.json();
           if (resp.ok && data.match === true) setVerified(true);
           else setVerificationError(data.error || 'Document verification failed.');
