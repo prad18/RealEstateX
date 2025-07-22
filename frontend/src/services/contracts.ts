@@ -235,7 +235,7 @@ export async function getActiveMortgagedProperties(userAddress: string, signer?:
     const vault = await contract.vaults(tokenId);
     console.log(`Vault for token ${tokenId}:`, vault);
     if (vault.active) {
-      const {ipfsHash , valuation , verification} = await PropertyContract.getProperty(tokenId); 
+      const {valuation} = await PropertyContract.getProperty(tokenId); 
       const seventy = Number(valuation) * 0.8;
       activeTokenIds.push({Id : tokenId, value: seventy});
     }
