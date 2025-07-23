@@ -35,8 +35,10 @@ export function getRPCProvider(){
   // **FIX:** Construct the full, absolute URL to the local proxy endpoint.
   // Ethers.js requires a full URL, and window.location.origin provides it dynamically
   // (e.g., "http://localhost:5173").
-  const rpcurl = `${window.location.origin}/api/v3/${projectId}`;
-  
+  const rpcurl = import.meta.env.DEV
+    ? `${window.location.origin}/api/v3/${projectId}`
+    : `https://sepolia.infura.io/v3/${projectId}`;
+
   return new ethers.JsonRpcProvider(rpcurl);
 }
 
