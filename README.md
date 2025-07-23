@@ -156,13 +156,19 @@ cd RealEstateX/frontend
 npm install
 
 # Create environment file
-cp .env.example .env.local
+cp .env.example .env
 
 # Configure environment variables
 VITE_WALLET_CONNECT_PROJECT_ID=your_project_id
 VITE_PINATA_JWT=your_pinata_jwt_token
 VITE_PINATA_GATEWAY=your_pinata_gateway_url
 VITE_REGRID_API_KEY=your_regrid_api_key
+VITE_PROPERTYNFT_ADDRESS=property_nft_address
+VITE_HOMEDTOKEN_ADDRESS=hometoken_address
+VITE_VAULTMANAGER_ADDRESS=vaultmanager_address
+VITE_ADMIN_PRIVATE_KEY=admin_account_metamask_privatekey
+VITE_RPC_URL=RPC_URL_HERE
+VITE_INFURA_PROJECT_ID=infura_api_key
 
 # Start development server
 npm run dev
