@@ -45,7 +45,6 @@ const FileUploader = ({ title, onUpload, doc, isLoading }: { title: string; onUp
 export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRegistrationComplete, propertyDetails, valuation }) => {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
-
   const [step, setStep] = useState<'upload' | 'property' | 'consent' | 'review'>('upload');
   const [propertyDoc, setPropertyDoc] = useState<{ file: File; ipfs_hash: string } | null>(null);
   const [idDoc, setIdDoc] = useState<{ file: File; ipfs_hash: string } | null>(null);
@@ -119,11 +118,10 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
     setMintedTokenId(tokenId);
   };
 
-  // --- RENDER STEPS ---
   if (step === 'upload') {
     return (
-      <div className="card-glass p-8 space-y-8 animate-fade-in">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Register Property: Step 1</h2>
+      <div className="space-y-8 animate-fade-in">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Register Property: Step 1</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FileUploader title="1. Upload Property Document" onUpload={e => handleFileUpload(e, setPropertyDoc, 'property')} doc={propertyDoc} isLoading={isLoading && activeUploader === 'property'} /><FileUploader title="2. Upload ID Proof" onUpload={e => handleFileUpload(e, setIdDoc, 'id')} doc={idDoc} isLoading={isLoading && activeUploader === 'id'} /></div>
         {error && ( <p className="text-red-400 text-center">{error}</p> )}
         <button onClick={handleContinue} disabled={isLoading || !propertyDoc || !idDoc} className="w-full btn-primary text-lg py-4">Continue</button>
@@ -133,7 +131,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
   
   if (step === 'property') {
     return (
-      <div className="card-glass p-8 space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in">
         <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Confirm Details: Step 2</h2>
         <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-3"><p className="text-white"><strong>Address:</strong> {propertyDetails.address}</p><p className="text-white"><strong>Owner:</strong> {propertyDetails.owner}</p><p className="text-white"><strong>Assessed Value:</strong> {propertyDetails.value.total > 0 ? `$${propertyDetails.value.total.toLocaleString()}` : 'Not assessed'}</p><p className="text-green-400"><strong>Uploaded Docs:</strong> Property Title ✅, ID Proof ✅</p></div>
         {error && <p className="text-red-400 text-center">{error}</p>}
@@ -144,17 +142,17 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
   
   if (step === 'review' && consentSigned) {
     if (verifying) {
-      return (<div className="card-glass p-8 flex flex-col items-center justify-center space-y-4"><div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div><p className="text-blue-300 font-semibold text-xl">Verifying your documents...</p><p className="text-gray-400 text-sm text-center">AI is analyzing document data against ownership records.</p></div>);
+      return (<div className="p-8 flex flex-col items-center justify-center space-y-4"><div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div><p className="text-blue-300 font-semibold text-xl">Verifying your documents...</p><p className="text-gray-400 text-sm text-center">AI is analyzing document data against ownership records.</p></div>);
     }
 
     if (verificationError) {
-      return (<div className="card-glass p-8 flex flex-col items-center justify-center space-y-4"><h3 className="text-2xl font-bold text-red-400">Verification Failed</h3><p className="text-red-300 text-center">{verificationError}</p><button onClick={() => { setVerificationError(''); setRetryCount(prev => prev + 1); }} className="btn-secondary mt-4">Try Again</button></div>);
+      return (<div className="p-8 flex flex-col items-center justify-center space-y-4"><h3 className="text-2xl font-bold text-red-400">Verification Failed</h3><p className="text-red-300 text-center">{verificationError}</p><button onClick={() => { setVerificationError(''); setRetryCount(prev => prev + 1); }} className="btn-secondary mt-4">Try Again</button></div>);
     }
     
     if (verified) {
       if (!mintingComplete) {
         return (
-          <div className="card-glass p-8 space-y-6 animate-fade-in">
+          <div className="space-y-6 animate-fade-in">
             <div className="text-center"><h2 className="text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">Mint Property NFT: Final Step</h2><p className="text-green-400 mt-2 font-semibold">✅ Ownership Verified!</p></div>
             <div className="glass-dark p-6 rounded-2xl border border-white/10 space-y-3"><p className="text-white"><strong>Address:</strong> {propertyDetails.address}</p><p className="text-white"><strong>Owner:</strong> {propertyDetails.owner}</p><p className="text-white"><strong>Market Value:</strong> {valuation ? `$${valuation.estimatedValue.toLocaleString()}` : 'N/A'}</p></div>
             <div className="w-full">
@@ -169,7 +167,7 @@ export const PropertyRegistration: React.FC<PropertyRegistrationProps> = ({ onRe
         );
       } else {
         return (
-          <div className="card-glass p-8 flex flex-col items-center justify-center space-y-6 animate-scale-in">
+          <div className="p-8 flex flex-col items-center justify-center space-y-6 animate-scale-in">
             <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-glow"><svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
             <h2 className="text-3xl font-bold text-white">Minting Complete!</h2>
             <p className="text-gray-300">Your property has been successfully tokenized.</p>

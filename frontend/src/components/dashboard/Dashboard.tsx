@@ -3,8 +3,7 @@ import { useAccount } from 'wagmi';
 import { web3Service, type PropertyData } from '@/services/web3Service';
 import { DocumentUpload } from '@/components/upload/DocumentUpload';
 import { PropertyRegistration } from '@/components/property/PropertyRegistration';
-import { type PropertyDetails } from '@/components/property/PropertyRegistration';
-import { type PropertyValuation } from '@/components/property/PropertyRegistration';
+import { type PropertyDetails, type PropertyValuation } from '@/components/property/PropertyRegistration';
 import { VerificationStatus } from '@/components/verification/VerificationStatus';
 import { CoordinatePropertyLookup } from '@/components/property/CoordinatePropertyLookup';
 import { MintPopup } from '@/components/ui/MintPopup';
@@ -12,7 +11,9 @@ import { type VerificationResult } from '@/services/verificationService';
 import { balanceof, getCountofProperty } from '@/services/contracts';
 import { Repay } from '@/components/Repay/Repay';
 import { MintHomedPage } from '@/components/ui/MintHomedPage';
-import { WalletConnect } from '../wallet/WalletConnect'; // Ensure this path is correct
+import { WalletConnect } from '../wallet/WalletConnect';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+
 
 // --- Helper Components ---
 const StatCard = ({ title, value, icon, delay = 0 }: { title: string; value: string | number | bigint; icon: React.ReactNode; delay?: number; }) => {
@@ -39,11 +40,13 @@ const StatCard = ({ title, value, icon, delay = 0 }: { title: string; value: str
   return (<div className="interactive-card glass-dark rounded-2xl p-6 magnetic-hover"><div className="flex items-center justify-between mb-4"><div className="gradient-border w-12 h-12"><div className="gradient-border-content w-full h-full flex items-center justify-center">{icon}</div></div></div><div><div className="text-2xl font-bold text-white mb-1">{Math.floor(animatedValue).toLocaleString()}</div><div className="text-sm text-gray-400">{title}</div></div></div>);
 };
 
+
 // --- Main Dashboard Component ---
 type FlowType = 'dashboard' | 'property-lookup' | 'upload' | 'register' | 'verify' | 'repay' | 'mint-homed' | 'mint-homed-page';
 
 export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect }) => {
   const { address, isConnected } = useAccount();
+  const { status: networkStatus } = useNetworkStatus();
   const [properties, setProperties] = useState<PropertyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentFlow, setCurrentFlow] = useState<FlowType>('dashboard');
@@ -85,7 +88,7 @@ export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect
     setCurrentFlow('dashboard');
     setCurrentPropertyId(null);
     setUploadedDocuments([]);
-    setCurrentPropertyDetails(null); 
+    setCurrentPropertyDetails(null);
     setCurrentValuation(null);
   };
 
@@ -103,56 +106,62 @@ export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect
     <>
       <div className="p-4 md:p-8 space-y-8 animate-fade-in">
 
-        {/* ==================================================================== */}
-        {/* == THIS IS THE MAIN NAVIGATION HEADER FOR THE DASHBOARD == */}
-        {/* ==================================================================== */}
         <header className="flex justify-between items-center glass-dark p-4 rounded-2xl animate-fade-in-down">
             <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-accent-600 rounded-lg flex items-center justify-center shadow-lg">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>                
+                    </svg>
                     </div>
                 <h1 className="text-2xl font-bold text-white hidden sm:block">RealEstateX</h1>
             </div>
             <div className="flex items-center space-x-4">
-                <button
-                    onClick={onDisconnect}
-                    className="btn-secondary text-sm"
-                >
-                    ← Back to Home
-                </button>
+                {currentFlow !== 'dashboard' ? (
+                  <button onClick={handleBackToDashboard} className="btn-secondary text-sm">
+                    ← Back to Dashboard
+                  </button>
+                ) : (
+                  <button onClick={onDisconnect} className="btn-secondary text-sm">
+                    Disconnect
+                  </button>
+                )}
                 <WalletConnect />
             </div>
         </header>
-
-        {/* Progress Stepper for multi-step flows */}
+        {networkStatus === 'disconnected' && (
+          <div className="card-glass p-4 text-center border border-red-500/30 bg-red-500/10 animate-fade-in">
+             <p className="font-semibold text-red-300">
+                ⚠️ Network Connection Unstable
+              </p>
+              <p className="text-sm text-red-400/80 mt-1">
+                Could not connect to the BlockDAG RPC. Some data may be outdated. Retrying in the background...
+              </p>
+            </div>
+        )}
         {['upload', 'register', 'verify'].includes(currentFlow) && (
-          <div className="card-glass animate-slide-in-right p-6">
+          <div className="card-glass animate-fade-in-up p-6">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="flex items-center space-x-2 sm:space-x-4 mb-4 md:mb-0">
-                {['upload', 'register', 'verify'].map((flow, index) => (<React.Fragment key={flow}><div className="flex items-center space-x-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${currentFlow === flow ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-glow" : "bg-white/20 text-white/60"}`}><span className="font-semibold">{index + 1}</span></div><span className="text-sm font-medium text-white capitalize">{flow}</span></div>{index < 2 && <div className="h-px w-4 sm:w-8 bg-white/20"></div>}</React.Fragment>))}
+                {['upload', 'register', 'verify'].map((flow, index) => (<React.Fragment key={flow}><div className="flex items-center space-x-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${currentFlow === flow ? "bg-gradient-to-r from-primary-500 to-accent-600 text-white shadow-glow" : "bg-white/20 text-white/60"}`}><span className="font-semibold">{index + 1}</span></div><span className="text-sm font-medium text-white capitalize">{flow}</span></div>{index < 2 && <div className="h-px w-4 sm:w-8 bg-white/20"></div>}</React.Fragment>))}
               </div>
-              <button onClick={handleBackToDashboard} className="btn-secondary text-sm">Back to Dashboard</button>
+              {/* This button is now handled by the main header */}
             </div>
           </div>
         )}
 
-        {/* Main Dashboard Content */}
         {(currentFlow === 'dashboard' || currentFlow === 'mint-homed') && (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><StatCard title="Property NFTs" value={propertyCount || "0"} icon={<svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} delay={100}/><StatCard title="$HOMED Balance" value={balance || "0"} icon={<svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} delay={200} /></div>
-            <div className="card-glass animate-fade-in-up p-6" style={{ animationDelay: "0.2s" }}><h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">Quick Actions</h2><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"><button onClick={() => setCurrentFlow('property-lookup')} className="interactive-card glass-dark rounded-2xl p-4 text-left magnetic-hover group"><div className="text-lg font-bold text-white mb-1 group-hover:text-purple-300 transition-colors">🔍 Register Property</div><div className="text-sm text-gray-400">Lookup and onboard an asset</div></button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><StatCard title="Property NFTs" value={propertyCount || "0"} icon={<svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} delay={100}/><StatCard title="$HOMED Balance" value={balance || "0"} icon={<svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} delay={200} /></div>
+            <div className="card-glass animate-fade-in-up p-6" style={{ animationDelay: "0.2s" }}><h2 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent mb-6">Quick Actions</h2><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"><button onClick={() => setCurrentFlow('property-lookup')} className="interactive-card glass-dark rounded-2xl p-4 text-left magnetic-hover group"><div className="text-lg font-bold text-white mb-1 group-hover:text-purple-300 transition-colors">🔍 Register Property</div><div className="text-sm text-gray-400">Lookup and onboard an asset</div></button>
             <button onClick={() => setCurrentFlow('mint-homed-page')} className="interactive-card glass-dark rounded-2xl p-4 text-left magnetic-hover group">
                 <div className="text-lg font-bold text-white mb-1 group-hover:text-green-300 transition-colors">💰 Mint $HOMED</div>
                 <div className="text-sm text-gray-400">Generate stablecoins</div>
             </button>
             <button onClick={() => setCurrentFlow('repay')} className="interactive-card glass-dark rounded-2xl p-4 text-left magnetic-hover group"><div className="text-lg font-bold text-white mb-1 group-hover:text-orange-300 transition-colors">📊 Repay Loan</div><div className="text-sm text-gray-400">Manage your debt</div></button></div></div>
-            <div className="card-glass animate-fade-in-up p-6" style={{ animationDelay: "0.3s" }}><h2 className="text-2xl font-bold text-white mb-6">Your Properties</h2>{properties.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{properties.map((property, index) => (<div key={property.id} className="glass rounded-2xl p-6 border border-white/20 hover:border-white/40 flex flex-col justify-between transition-all duration-300 transform hover:scale-105" style={{ animationDelay: `${0.1 * index}s` }}><div><div className="flex items-start justify-between mb-4"><h3 className="font-semibold text-white text-lg">{property.title}</h3><span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${property.verificationStatus === "verified" ? "bg-green-500/20 text-green-400" : property.verificationStatus === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{property.verificationStatus}</span></div><p className="text-white/70 text-sm mb-4 line-clamp-2">{property.address}</p><div className="text-2xl font-bold text-white">${property.value.toLocaleString()}</div><div className="text-white/60 text-xs mt-1">{property.documents.length} docs • {new Date(property.createdAt).toLocaleDateString()}</div></div><button onClick={() => handleInitiateMint(property)} className="mt-4 w-full btn-primary disabled:bg-gray-500/50 disabled:text-gray-400 disabled:cursor-not-allowed">Mint from this Property</button></div>))}</div>) : (<div className="text-center py-16"><h3 className="text-xl font-semibold text-white mb-2">No Properties Yet</h3><p className="text-white/70 mb-6">Click "Register Property" to get started</p></div>)}</div>
+            <div className="card-glass animate-fade-in-up p-6" style={{ animationDelay: "0.3s" }}><h2 className="text-2xl font-bold text-white mb-6">Your Properties</h2>{properties.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{properties.map((property, index) => (<div key={property.id} className="glass-dark rounded-2xl p-6 border border-white/10 hover:border-white/40 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2" style={{ animationDelay: `${0.1 * index}s` }}><div><div className="flex items-start justify-between mb-4"><h3 className="font-semibold text-white text-lg">{property.title}</h3><span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${property.verificationStatus === "verified" ? "bg-green-500/20 text-green-400" : property.verificationStatus === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{property.verificationStatus}</span></div><p className="text-white/70 text-sm mb-4 line-clamp-2">{property.address}</p><div className="text-2xl font-bold text-white">${property.value.toLocaleString()}</div><div className="text-white/60 text-xs mt-1">{property.documents.length} docs • {new Date(property.createdAt).toLocaleDateString()}</div></div><button onClick={() => handleInitiateMint(property)} className="mt-4 w-full btn-primary disabled:bg-gray-500/50 disabled:text-gray-400 disabled:cursor-not-allowed">Mint from this Property</button></div>))}</div>) : (<div className="text-center py-16"><h3 className="text-xl font-semibold text-white mb-2">No Properties Yet</h3><p className="text-white/70 mb-6">Click "Register Property" to get started</p></div>)}</div>
           </div>
         )}
 
-        {/* Full-page flows for different actions */}
         {['property-lookup', 'upload', 'register', 'verify', 'repay', 'mint-homed-page'].includes(currentFlow) && (
           <div className="card-glass p-8 animate-fade-in">
             {currentFlow === 'property-lookup' && <CoordinatePropertyLookup />}
@@ -164,7 +173,7 @@ export const Dashboard: React.FC<{ onDisconnect: () => void }> = ({ onDisconnect
                 propertyDetails={currentPropertyDetails}
                 valuation={currentValuation ?? undefined}
               />
-            )}         
+            )}
             {currentFlow === 'verify' && currentPropertyId && <VerificationStatus propertyId={currentPropertyId} onVerificationUpdate={handleVerificationComplete} />}
             {currentFlow === 'repay' && <Repay onBackToDashboard={handleBackToDashboard} />}
             {currentFlow === 'mint-homed-page' && <MintHomedPage onMintSuccess={handleMintSuccess} onMintError={handleMintError} onCancel={handleBackToDashboard} />}

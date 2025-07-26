@@ -1,7 +1,7 @@
 import {ethers, BrowserProvider} from 'ethers';
-import VerifiedPropertyNFT from '../abi/VerifiedPropertyNFT_metadata.json';
-import HOMEDToken from '../abi/HOMEDToken_metadata.json';
-import VaultManager from '../abi/VaultManager_metadata.json';
+import VerifiedPropertyNFT from '../abi/VerifiedPropertyNFT_metadata_blockdag.json';
+import HOMEDToken from '../abi/HOMEDToken_metadata_blockdag.json';
+import VaultManager from '../abi/VaultManager_metadata_blockdag.json';
 
 declare global {
   interface Window {
@@ -25,21 +25,14 @@ export const CONTRACTS = {
 };
 // This function connects to the blockchain RPC endpoint via the local proxy.
 export function getRPCProvider(){
-  const projectId = import.meta.env.VITE_INFURA_PROJECT_ID;
+  const rpcUrl = import.meta.env.VITE_RPC_URL;
 
   // Ensure the environment variable is set.
-  if (!projectId) {
-    throw new Error("VITE_INFURA_PROJECT_ID is not set in your .env.local file.");
+  if (!rpcUrl) {
+    throw new Error("VITE_RPC_URL is not set in your .env file.");
   }
 
-  // **FIX:** Construct the full, absolute URL to the local proxy endpoint.
-  // Ethers.js requires a full URL, and window.location.origin provides it dynamically
-  // (e.g., "http://localhost:5173").
-  const rpcurl = import.meta.env.DEV
-    ? `${window.location.origin}/api/v3/${projectId}`
-    : `https://sepolia.infura.io/v3/${projectId}`;
-
-  return new ethers.JsonRpcProvider(rpcurl);
+  return new ethers.JsonRpcProvider(rpcUrl);
 }
 
 // This function creates a signer instance for the admin wallet.

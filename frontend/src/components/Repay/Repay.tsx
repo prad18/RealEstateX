@@ -6,7 +6,7 @@ interface RepayProps {
   onBackToDashboard: () => void;
 }
 
-export const Repay: React.FC<RepayProps> = ({ onBackToDashboard }) => {
+export const Repay: React.FC<RepayProps> = ({ }) => {
     const { address } = useAccount();
     const [activeTokens, setActiveTokens] = useState<Array<{ tokenId: bigint; value: number }>>([]);
     const [loading, setLoading] = useState(false);
@@ -91,9 +91,6 @@ export const Repay: React.FC<RepayProps> = ({ onBackToDashboard }) => {
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
                     Repay Mortgage
                 </h1>
-                <button onClick={onBackToDashboard} className="btn-secondary">
-                    Back to Dashboard
-                </button>
             </div>
 
             {loading ? (

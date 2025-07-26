@@ -7,7 +7,8 @@ const NETWORK_NAMES: { [key: number]: string } = {
 }
 
 const NETWORK_COLORS: { [key: number]: string } = {
-  1043: 'bg-gradient-to-r from-purple-500 to-blue-500'
+  1043: 'bg-gradient-to-r from-purple-500 to-blue-500',
+  11155111: 'bg-blue-400'
 }
 
 export const NetworkDisplay: React.FC = () => {
@@ -24,7 +25,7 @@ export const NetworkDisplay: React.FC = () => {
   return (
     <div className="flex items-center space-x-2">
       <div className={`w-2 h-2 rounded-full ${networkColor}`}></div>
-      <span className="text-xs text-gray-600 font-medium">
+      <span className="text-xs text-slate-400 font-medium">
         {networkName}
       </span>
     </div>

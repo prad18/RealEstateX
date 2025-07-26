@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { WagmiProvider, useAccount } from 'wagmi';
+import { WagmiProvider, useAccount, useDisconnect } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './config/wallet';
 import { Dashboard } from './components/dashboard/Dashboard';
@@ -9,6 +9,7 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const [showDashboard, setShowDashboard] = useState(false);
 
   const handleGetStarted = () => {
@@ -17,20 +18,19 @@ function AppContent() {
     }
   };
 
-  // Automatically show the dashboard when the wallet connects.
   useEffect(() => {
     if (isConnected) {
       setShowDashboard(true);
     }
   }, [isConnected]);
-
-  // This function will be called by the "Back to Home" button.
+  
+  // This function now handles full logout: disconnect wallet AND hide dashboard.
   const handleDisconnect = () => {
+    disconnect();
     setShowDashboard(false);
   };
 
   if (showDashboard && isConnected) {
-    // Pass the handleDisconnect function to the Dashboard component.
     return <Dashboard onDisconnect={handleDisconnect} />;
   }
 

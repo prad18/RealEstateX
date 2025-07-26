@@ -10,15 +10,4 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
-    proxy: {
-      // This will proxy any request from your app starting with /api
-      // to the Infura Sepolia endpoint.
-      '/api': {
-        target: 'https://sepolia.infura.io',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
-  },
 })

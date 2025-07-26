@@ -12,7 +12,6 @@ interface MintHomedPageProps {
 export const MintHomedPage: React.FC<MintHomedPageProps> = ({
   onMintSuccess,
   onMintError,
-  onCancel,
 }) => {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
@@ -83,9 +82,6 @@ export const MintHomedPage: React.FC<MintHomedPageProps> = ({
         <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
           🏠 Open Property Vault
         </h2>
-        <button onClick={onCancel} className="btn-secondary">
-            Back to Dashboard
-        </button>
       </div>
 
       {/* Renders the same steps as the popup */}

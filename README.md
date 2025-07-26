@@ -200,7 +200,7 @@ cp .env.example .env
 python -m spacy download en_core_web_sm
 
 # Start FastAPI server
-uvicorn verify_docs_fastapi:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
 ### **Access the Application**
